@@ -1,0 +1,11 @@
+[credentials]
+
+# Example:
+# Don't use quotes for string.
+# CONSUMER_KEY = aKnbN5E0yuC75D3T4VGIw7Bv1
+
+CONSUMER_KEY = TODO
+CONSUMER_SECRET = TODO
+
+ACCESS_TOKEN = TODO
+ACCESS_TOKEN_SECRET = TODO
