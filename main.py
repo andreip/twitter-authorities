@@ -111,8 +111,9 @@ def conversation_started_by_user(tweet):
 
 def compute_user_stats(screen_name, col=COLLECTION):
     tweets = get_tweets(screen_name, col)
-    print tweets.count()
     user_metrics = defaultdict(int)
+    retweeters = []
+
     for tweet in tweets:
         tweet_type = get_tweet_type_from_text(tweet['text'])
         user_metrics[tweet_type] += 1
@@ -124,6 +125,13 @@ def compute_user_stats(screen_name, col=COLLECTION):
             # Mark the fact that this tweet has been retweeted at least once.
             if tweet['retweet_count'] > 0:
                 user_metrics[UserMetrics.RT2] += 1
+                # Keep a record of all the users that retweeded author's
+                # tweets. This way we can compute the nr of unique retweeters.
+                retweeters += map(lambda x: x['user']['screen_name'],
+                                  api.retweets(tweet['id']))
+    # Update the number of unique users that retweeted current users's tweets.
+    user_metrics[UserMetrics.RT3] = len(set(retweeters))
+
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
 
 compute_user_stats('mishu21')

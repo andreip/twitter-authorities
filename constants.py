@@ -24,9 +24,10 @@ class UserMetrics:
              sation is initiated by the author
      * RT1 - Number of retweets of other's tweet
      * RT2 - Number of unique tweets (OT1) retweeted by other users
+     * RT3 - Number of unique users who retweeted author's tweets
     '''
     OT1, CT1, RT1 = TweetType.OT, TweetType.CT, TweetType.RT
-    OT2, CT2, RT2 = range(3,6)
+    OT2, CT2, RT2, RT3 = range(3,7)
 
 # MongoDB specifics.
 
