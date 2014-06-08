@@ -5,14 +5,7 @@ from bson.objectid import ObjectId
 import pymongo
 import tweepy
 
-from helpers import get_config
-
-config = get_config()
-
-CONSUMER_KEY = config.get('credentials', 'CONSUMER_KEY')
-CONSUMER_SECRET = config.get('credentials', 'CONSUMER_SECRET')
-ACCESS_TOKEN = config.get('credentials', 'ACCESS_TOKEN')
-ACCESS_TOKEN_SECRET = config.get('credentials', 'ACCESS_TOKEN_SECRET')
+from constants import *
 
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
@@ -20,19 +13,7 @@ auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 
 conn = pymongo.MongoClient("mongodb://localhost")
-db = conn.licenta
-
-SAMPLE_COLLECTION = "tweets_en"
-COLLECTION = "tweets_test"
-COLLECTION_USERS = "tweets_users"
-
-class TweetType:
-    '''Tweet Types:
-     - original tweet OT
-     - conversational tweet CT
-     - repeated tweet RT
-    '''
-    OT, CT, RT = range(3)
+db = conn[DATABASE_NAME]
 
 ## Show rate limit info
 #print api.rate_limit_status()
