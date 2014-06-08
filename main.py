@@ -73,13 +73,14 @@ def get_tweets(screen_name, col=COLLECTION):
     print 'Done fetching and storing!'
     return db[col].find({'user.screen_name': screen_name})
 
-def get_tweet_type(tweet_id):
+def get_tweet_type(tweet_id, col=COLLECTION):
     cursor = db[COLLECTION].find({'id': tweet_id})
     if cursor.count() > 0:
         tweet = cursor.next()
     else:
         print 'Fetching tweet id ' + str(tweet_id)
         tweet = api.get_status(tweet_id)
+        db[col].update({'id': tweet['id']}, tweet, upsert=True)
     return get_tweet_type_from_text(tweet['text'])
 
 def get_tweet_type_from_text(tweet_text):
