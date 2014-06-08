@@ -117,9 +117,13 @@ def compute_user_stats(screen_name, col=COLLECTION):
         tweet_type = get_tweet_type_from_text(tweet['text'])
         user_metrics[tweet_type] += 1
         # Find out if conversation was started by crt user.
-        if (tweet_type == TweetType.CT and
-           conversation_started_by_user(tweet)):
-            user_metrics[UserMetrics.CT2] += 1
+        if tweet_type == TweetType.CT:
+           if conversation_started_by_user(tweet):
+                user_metrics[UserMetrics.CT2] += 1
+        elif tweet_type == TweetType.OT:
+            # Mark the fact that this tweet has been retweeted at least once.
+            if tweet['retweet_count'] > 0:
+                user_metrics[UserMetrics.RT2] += 1
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
 
 compute_user_stats('mishu21')

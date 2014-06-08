@@ -23,9 +23,10 @@ class UserMetrics:
      * CT2 - Number of conversational tweets where conver-
              sation is initiated by the author
      * RT1 - Number of retweets of other's tweet
+     * RT2 - Number of unique tweets (OT1) retweeted by other users
     '''
     OT1, CT1, RT1 = TweetType.OT, TweetType.CT, TweetType.RT
-    OT2, CT2 = range(3,5)
+    OT2, CT2, RT2 = range(3,6)
 
 # MongoDB specifics.
 
