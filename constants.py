@@ -15,6 +15,18 @@ class TweetType:
     '''
     OT, CT, RT = range(3)
 
+class UserMetrics:
+    '''Type of metrics for each authority:
+     * OT1 - Number of original tweets
+     * OT2 - Number of links shared
+     * CT1 - Number of conversational tweets
+     * CT2 - Number of conversational tweets where conver-
+             sation is initiated by the author
+     * RT1 - Number of retweets of other's tweet
+    '''
+    OT1, CT1, RT1 = TweetType.OT, TweetType.CT, TweetType.RT
+    OT2, CT2 = range(3,5)
+
 # MongoDB specifics.
 
 SAMPLE_COLLECTION = 'tweets_en'

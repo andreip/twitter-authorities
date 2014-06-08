@@ -89,7 +89,6 @@ def get_tweet_type_from_text(tweet_text):
      - repeated tweet RT
     '''
     if re.match('^@\w+.*', tweet_text):
-        print tweet_text
         return TweetType.CT
     if re.match('^RT @\w+:.*', tweet_text):
         return TweetType.RT
@@ -98,13 +97,24 @@ def get_tweet_type_from_text(tweet_text):
 def compute_user_stats(screen_name, col=COLLECTION):
     tweets = get_tweets(screen_name, col)
     print tweets.count()
-    tweet_types = defaultdict(int)
+    user_metrics = defaultdict(int)
     for tweet in tweets:
         tweet_type = get_tweet_type_from_text(tweet['text'])
-        tweet_types[tweet_type] += 1
-    print 'Type summary for user ' + screen_name + ': ' + str(tweet_types)
+        user_metrics[tweet_type] += 1
+        # Find out if conversation was started by crt user.
+        if tweet_type == TweetType.CT:
+            # If it's not an in reply to conversation, then he just wanted to
+            # talk with @username, he started it :).
+            if not tweet['in_reply_to_status_id']:
+                user_metrics[UserMetrics.CT2] += 1
+            # Else it's still a possibility that he replied to a non
+            # conversational tweet (!= CT), in which case he yet again
+            # started the discussion.
+            else:
+                reply_to_type = get_tweet_type(tweet['in_reply_to_status_id'])
+                if reply_to_type != TweetType.CT:
+                    user_metrics[UserMetrics.CT2] += 1
+    print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
 
-#compute_user_stats('mishu21')
-compute_user_stats('anpetre')
-
-
+compute_user_stats('mishu21')
+#compute_user_stats('anpetre')
