@@ -95,6 +95,20 @@ def get_tweet_type_from_text(tweet_text):
         return TweetType.RT
     return TweetType.OT
 
+def conversation_started_by_user(tweet):
+    '''Check if a tweet like "@john how are you man" is
+    first started by john first or by the author itself.
+    '''
+    # If it's not an in reply to conversation, then he just wanted to
+    # talk with @username, he started it :).
+    if not tweet['in_reply_to_status_id']:
+        return True
+    # Else it's still a possibility that he replied to a non
+    # conversational tweet (!= CT), in which case he yet again
+    # started the discussion.
+    reply_to_type = get_tweet_type(tweet['in_reply_to_status_id'])
+    return reply_to_type != TweetType.CT
+
 def compute_user_stats(screen_name, col=COLLECTION):
     tweets = get_tweets(screen_name, col)
     print tweets.count()
@@ -103,18 +117,9 @@ def compute_user_stats(screen_name, col=COLLECTION):
         tweet_type = get_tweet_type_from_text(tweet['text'])
         user_metrics[tweet_type] += 1
         # Find out if conversation was started by crt user.
-        if tweet_type == TweetType.CT:
-            # If it's not an in reply to conversation, then he just wanted to
-            # talk with @username, he started it :).
-            if not tweet['in_reply_to_status_id']:
-                user_metrics[UserMetrics.CT2] += 1
-            # Else it's still a possibility that he replied to a non
-            # conversational tweet (!= CT), in which case he yet again
-            # started the discussion.
-            else:
-                reply_to_type = get_tweet_type(tweet['in_reply_to_status_id'])
-                if reply_to_type != TweetType.CT:
-                    user_metrics[UserMetrics.CT2] += 1
+        if (tweet_type == TweetType.CT and
+           conversation_started_by_user(tweet)):
+            user_metrics[UserMetrics.CT2] += 1
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
 
 compute_user_stats('mishu21')
