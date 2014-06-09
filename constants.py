@@ -19,6 +19,9 @@ class UserMetrics:
     '''Type of metrics for each authority:
      * OT1 - Number of original tweets
      * OT2 - Number of links shared
+     * OT3 - Self-similarity score that computes how similar is
+             author's recent tweet w.r.t her previous tweets
+     * OT4 - Number of keyword hashtags used
      * CT1 - Number of conversational tweets
      * CT2 - Number of conversational tweets where conver-
              sation is initiated by the author
@@ -33,6 +36,7 @@ class UserMetrics:
     OT1, CT1, RT1 = TweetType.OT, TweetType.CT, TweetType.RT
     OT2, CT2, RT2, RT3 = range(3, 7)
     M1, M2, M3, M4 = range(7, 11)
+    OT3, OT4 = range(11, 13)
 
 # MongoDB specifics.
 

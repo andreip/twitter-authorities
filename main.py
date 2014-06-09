@@ -6,6 +6,7 @@ import pymongo
 import tweepy
 
 from constants import *
+from helpers import similarity_score
 
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
@@ -63,7 +64,8 @@ def get_tweets(screen_name, col=COLLECTION):
 
     # See if we've got all tweets or not.
     user = get_user(screen_name)
-    tweets = db[col].find({'user.screen_name': screen_name})
+    tweets = db[col].find({'user.screen_name': screen_name}).sort('id',
+        pymongo.ASCENDING)
 
     # Case when we already have everything in db.
     if tweets.count() == user['statuses_count']:
@@ -116,6 +118,7 @@ def compute_user_stats_from_own_tweets(screen_name, user_metrics,
                                        col=COLLECTION):
     tweets = get_tweets(screen_name, col)
     retweeters, users_mentioned = [], []
+    original_texts = []
 
     for tweet in tweets:
         tweet_type = get_tweet_type_from_text(tweet['text'])
@@ -137,11 +140,22 @@ def compute_user_stats_from_own_tweets(screen_name, user_metrics,
             for user_mention in tweet['entities']['user_mentions']:
                 users_mentioned.append(user_mention['screen_name'])
 
+            # Count how many hashtags one has used in all the tweets.
+            for hashtag in tweet['entities']['hashtags']:
+                print hashtag, tweet['text']
+                user_metrics[UserMetrics.OT4] += 1
+            original_texts.append(tweet['text'])
+
     # Update the number of unique users that retweeted current users's tweets.
     user_metrics[UserMetrics.RT3] = len(set(retweeters))
     # Count the nr of users mentioned by the author; and also unique.
     user_metrics[UserMetrics.M1] = len(users_mentioned)
     user_metrics[UserMetrics.M2] = len(set(users_mentioned))
+
+    # Computing the OT3 score on the author's tweets. See repo
+    # paper IdentifyingTopicalAuthoritiesInMicroblogs.pdf for details.
+    score = similarity_score(original_texts)
+    user_metrics[UserMetrics.OT3] = score
 
 def compute_user_stats_from_other_tweets(screen_name, user_metrics,
                                          col=COLLECTION):
