@@ -135,12 +135,12 @@ def compute_user_stats_from_own_tweets(screen_name, user_metrics,
             # For each original tweet, check if it's got any mentions of other
             # users.
             for user_mention in tweet['entities']['user_mentions']:
-                user_metrics[UserMetrics.M1] += 1
                 users_mentioned.append(user_mention['screen_name'])
 
     # Update the number of unique users that retweeted current users's tweets.
     user_metrics[UserMetrics.RT3] = len(set(retweeters))
-    # Count the unique nr of users mentioned by the author.
+    # Count the nr of users mentioned by the author; and also unique.
+    user_metrics[UserMetrics.M1] = len(users_mentioned)
     user_metrics[UserMetrics.M2] = len(set(users_mentioned))
 
 def compute_user_stats_from_other_tweets(screen_name, user_metrics,
