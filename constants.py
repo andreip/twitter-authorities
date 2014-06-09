@@ -25,9 +25,12 @@ class UserMetrics:
      * RT1 - Number of retweets of other's tweet
      * RT2 - Number of unique tweets (OT1) retweeted by other users
      * RT3 - Number of unique users who retweeted author's tweets
+     * M1  - Number of mentions of other users by the author
+     * M2  - Number of unique users mentioned by the author
     '''
     OT1, CT1, RT1 = TweetType.OT, TweetType.CT, TweetType.RT
-    OT2, CT2, RT2, RT3 = range(3,7)
+    OT2, CT2, RT2, RT3 = range(3, 7)
+    M1, M2, M3, M4 = range(7, 11)
 
 # MongoDB specifics.
 
