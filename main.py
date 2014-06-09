@@ -11,6 +11,9 @@ auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
 api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
+# This one is to avoid a bug with tweepy once you add jsonParser to it.
+# https://github.com/tweepy/tweepy/issues/370
+api2 = tweepy.API(auth)
 
 conn = pymongo.MongoClient("mongodb://localhost")
 db = conn[DATABASE_NAME]
@@ -109,9 +112,9 @@ def conversation_started_by_user(tweet):
     reply_to_type = get_tweet_type(tweet['in_reply_to_status_id'])
     return reply_to_type != TweetType.CT
 
-def compute_user_stats(screen_name, col=COLLECTION):
+def compute_user_stats_from_own_tweets(screen_name, user_metrics,
+                                       col=COLLECTION):
     tweets = get_tweets(screen_name, col)
-    user_metrics = defaultdict(int)
     retweeters, users_mentioned = [], []
 
     for tweet in tweets:
@@ -139,6 +142,37 @@ def compute_user_stats(screen_name, col=COLLECTION):
     user_metrics[UserMetrics.RT3] = len(set(retweeters))
     # Count the unique nr of users mentioned by the author.
     user_metrics[UserMetrics.M2] = len(set(users_mentioned))
+
+def compute_user_stats_from_other_tweets(screen_name, user_metrics,
+                                         col=COLLECTION):
+    '''Find tweets that mention the author. These we'll not keep
+    in the db for simplicity. The tactic here would be to (for future #TODO):
+     * gather everythong and store in DB
+     * make api calls only for those with since_id > the biggest id we could
+       find in our DB matching @screen_name.
+
+    But for now, just do an api call all the time.
+    '''
+    users_mentioning_author = []
+    # Get all the authors that mention "@screen_name" by using search API.
+    # We actually also have to check so those are no CT (conversational type);
+    # as it turns out the API is inexact and also brings some CTs. Moreover,
+    # it does not return all mentions :(, but will have to
+    # do as I've found no better option.
+    tweets = tweepy.Cursor(api2.search, q="@" + screen_name, rpp=100).items()
+    for tweet in tweets:
+        tweet_type = get_tweet_type_from_text(tweet.text)
+        if tweet_type == TweetType.OT:
+            users_mentioning_author.append(tweet.user.screen_name)
+    user_metrics[UserMetrics.M3] = len(users_mentioning_author)
+    user_metrics[UserMetrics.M4] = len(set(users_mentioning_author))
+
+def compute_user_stats(screen_name, col=COLLECTION):
+    user_metrics = defaultdict(int)
+    # Based on author's tweets.
+    compute_user_stats_from_own_tweets(screen_name, user_metrics)
+    # Based on what others are saying about author.
+    compute_user_stats_from_other_tweets(screen_name, user_metrics)
 
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
 

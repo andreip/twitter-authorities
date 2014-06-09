@@ -27,6 +27,8 @@ class UserMetrics:
      * RT3 - Number of unique users who retweeted author's tweets
      * M1  - Number of mentions of other users by the author
      * M2  - Number of unique users mentioned by the author
+     * M3  - Number of mentions by others of the author
+     * M4  - Number of unique users mentioning the author
     '''
     OT1, CT1, RT1 = TweetType.OT, TweetType.CT, TweetType.RT
     OT2, CT2, RT2, RT3 = range(3, 7)
