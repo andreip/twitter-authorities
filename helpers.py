@@ -10,6 +10,16 @@ def get_config(config_file='config.rc'):
         config.readfp(io.BytesIO(f.read()))
     return config
 
+def similarity_texts(phrase1, phrase2):
+    '''Phrase input is a list of words, not a string.
+    Computes
+                    |s1 ^ s2|
+        S(s1, s2) = --------- ; where ^ = set intersection.
+                       |s1|
+    '''
+    intersect = set(phrase1) & set(phrase2)
+    return float(len(intersect)) / len(phrase1)
+
 def similarity_score(texts):
     '''Computing similarity between a set of texts follows this pattern:
       * considering that the texts are ordered in cronological order so that
@@ -37,8 +47,10 @@ def similarity_score(texts):
           - stem words
           - remove URLs, @mentions
     '''
-    texts = map(lambda t: [t, process_text(t)], texts)
-    # TODO
-    for t in texts:
-        print t
-    return -1
+    texts = filter(lambda x: len(x) > 0, map(process_text, texts))
+    n = len(texts)
+    s = 0
+    for i in range(0,n):
+        for j in range(0,i):
+            s += similarity_texts(texts[i], texts[j])
+    return 2 * s / float(n * (n-1))
