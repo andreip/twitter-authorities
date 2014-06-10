@@ -67,12 +67,19 @@ def get_tweets(screen_name, col=COLLECTION):
     tweets = db[col].find({'user.screen_name': screen_name}).sort('id',
         pymongo.ASCENDING)
 
+    max_id = None
     # Case when we already have everything in db.
     if tweets.count() == user['statuses_count']:
         print 'Already in db, skip fetch.'
         return tweets
+    # We already have some in DB, so we need not fetch everything.
+    # Continue from where we left off.
+    elif tweets.count():
+        # Find the minimum id, that's the point where we got rate limited.
+        max_id = tweets[0]['id']
 
-    cursor = tweepy.Cursor(api.user_timeline, screen_name=screen_name)
+    cursor = tweepy.Cursor(api.user_timeline, screen_name=screen_name,
+                           max_id=max_id)
     for tweet in cursor.items():
         db[col].update({'id': tweet['id']}, tweet, upsert=True)
     print 'Done fetching and storing!'
