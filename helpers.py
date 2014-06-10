@@ -39,13 +39,13 @@ def similarity_score(texts):
         -> a small value of S_total indicates the user posts on a wider swathe
            of topics or that the vocabulary is very diverse
 
-       * In order to better do the S(s1, s2) comparation, we need to (from
-         both s1 and s2):
-          - tokenize and obtain words from the phrase, remove punctuation
-          - lower case words
-          - remove stop words
-          - stem words
-          - remove URLs, @mentions
+      * In order to better do the S(s1, s2) comparation, we need to (from
+        both s1 and s2):
+         - tokenize and obtain words from the phrase, remove punctuation
+         - lower case words
+         - remove stop words
+         - stem words
+         - remove URLs, @mentions
     '''
     texts = filter(lambda x: len(x) > 0, map(process_text, texts))
     n = len(texts)

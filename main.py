@@ -147,6 +147,9 @@ def compute_user_stats_from_own_tweets(screen_name, user_metrics,
             for user_mention in tweet['entities']['user_mentions']:
                 users_mentioned.append(user_mention['screen_name'])
 
+            # Count the number of URLs one shares in his tweets.
+            user_metrics[UserMetrics.OT2] += len(tweet['entities']['urls'])
+
             # Count how many hashtags one has used in all the tweets.
             for hashtag in tweet['entities']['hashtags']:
                 print hashtag, tweet['text']
