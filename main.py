@@ -4,12 +4,14 @@ from collections import defaultdict
 import pprint
 import re
 import sys
+import time
 
 from bson.objectid import ObjectId
 import pymongo
 
 from constants import *
-from helpers import similarity_score
+from helpers.helpers import similarity_score, iterator_get_next
+from helpers.mongo import followers_col, friends_col
 from patch_tweepy import *
 
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -125,13 +127,13 @@ def conversation_started_by_user(tweet):
     reply_to_type = get_tweet_type(tweet['in_reply_to_status_id'])
     return reply_to_type != TweetType.CT
 
-def compute_user_stats_from_own_tweets(screen_name, user_metrics,
-                                       col=COLLECTION):
+def compute_user_metrics_from_own_tweets(screen_name, author_tweets,
+                                         user_metrics):
     tweets = get_tweets(screen_name, col)
     retweeters, users_mentioned = [], []
     original_texts = []
 
-    for tweet in tweets:
+    for tweet in author_tweets:
         tweet_type = get_tweet_type_from_text(tweet['text'])
         user_metrics[tweet_type] += 1
         # Find out if conversation was started by crt user.
@@ -171,8 +173,7 @@ def compute_user_stats_from_own_tweets(screen_name, user_metrics,
     score = similarity_score(original_texts)
     user_metrics[UserMetrics.OT3] = score
 
-def compute_user_stats_from_other_tweets(screen_name, user_metrics,
-                                         col=COLLECTION):
+def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     '''Find tweets that mention the author. These we'll not keep
     in the db for simplicity. The tactic here would be to (for future #TODO):
      * gather everythong and store in DB
@@ -195,25 +196,26 @@ def compute_user_stats_from_other_tweets(screen_name, user_metrics,
     user_metrics[UserMetrics.M3] = len(users_mentioning_author)
     user_metrics[UserMetrics.M4] = len(set(users_mentioning_author))
 
-def compute_user_stats(screen_name, col=COLLECTION):
+def compute_user_metrics(screen_name, author_tweets, col):
     user_metrics = defaultdict(int)
     # Based on author's tweets.
-    compute_user_stats_from_own_tweets(screen_name, user_metrics)
+    compute_user_metrics_from_own_tweets(screen_name, author_tweets,
+                                         user_metrics)
     # Based on what others are saying about author.
-    compute_user_stats_from_other_tweets(screen_name, user_metrics)
+    compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
 
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
     return user_metrics
 
 
-def compute_user_features(scren_name, col=COLLECTION):
+def compute_user_features(screen_name, author_tweets, col):
     '''Compute the feature list based on some metrics for each author. See
     IdentifyingTopicalAuthoritiesInMicroblogs.pdf paper for details.
 
     TS - Topical Signal
 
     '''
-    metrics = compute_user_stats('anpetre')
+    metrics = compute_user_metrics(screen_name, author_tweets, col)
 
 
 def find_authorities(q, col):
@@ -232,37 +234,108 @@ def find_authorities(q, col):
         if tweets.count() < MIN_TWEETS_USER:
             continue
 
-        features = compute_user_features(user, tweets)
+        features = compute_user_features(user, tweets, col)
         print features
 
 
-def generate_tweets(q, items, col, lang='en', rpp=100):
+def fetch_tweets(q, items, col, lang='en', rpp=100):
     print q, items, col
     tweets = tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).items(items)
     for tweet in tweets:
         db[col].update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
 
+def fetch_followers_and_friends(col, user_names):
+    '''Fetch follower/friends for all distinct users present in
+    the db and store them in database.
+    Do this in a way we don't get rate limited too, once every minute
+    per query page.
+    '''
+    print 'Fetching friend/followers for ' + str(len(user_names)) + ' users'
+    for name in user_names:
+        friends_ids = []
+        followers_ids = []
+
+        friends_cursor = tweepy.Cursor(api.friends_ids, screen_name=name).pages()
+        followers_cursor = tweepy.Cursor(api.followers_ids, screen_name=name).pages()
+        have_friends, have_followers = True, True
+
+        while have_friends or have_followers:
+            print 'Fetching friends, followers for user ' + name
+            # Get both friends,followers and then sleep so to avoid
+            # rate limit.
+            if have_friends:
+                page = iterator_get_next(friends_cursor)
+                if page:
+                    friends_ids += page['ids']
+                if not page or len(page['ids']) < 5000:
+                    have_friends = False
+            if have_followers:
+                page = iterator_get_next(followers_cursor)
+                if page:
+                    followers_ids += page['ids']
+                if not page or len(page['ids']) < 5000:
+                    have_followers = False
+            time.sleep(60)
+        db[friends_col(col)].update({'name': name},
+                                   {'name': name, 'ids': friends_ids},
+                                   upsert=True)
+        db[followers_col(col)].update({'name': name},
+                                     {'name': name, 'ids': followers_ids},
+                                     upsert=True)
+
+
+def get_usernames(col):
+    # http://docs.mongodb.org/manual/tutorial/aggregation-zip-code-data-set/
+    user_names = db[col].aggregate([
+                    {"$group": {"_id": "$user.screen_name",
+                                "total": {"$sum": 1}}},
+                    {"$match": {"total" : {"$gte": MIN_TWEETS_USER}}}
+                 ])
+    user_names = map(lambda u: u['_id'], user_names['result'])
+    result = []
+
+    # Now filter those which have too many friends/followers.
+    for name in user_names:
+        user = db[col].find_one({"user.screen_name": name}, {"user":1})
+        friends_count = user['user']['friends_count']
+        followers_count = user['user']['followers_count']
+        if friends_count < MAX_FRIENDS and followers_count < MAX_FOLLOWERS:
+            result.append(name)
+        else:
+            print 'Skipping user ' + name + ' with friends,followers: ',\
+                  friends_count, followers_count
+    print 'Users for which to fetch friends/followers', result
+    return result
+
 
 def exit():
     print 'Call like: ' + sys.argv[0] +\
-          ' [gen search items][stats][nogen search]'
+          ' [fetch search items][stats][compute search]'
     sys.exit(1)
 
 
 def main():
     if len(sys.argv) == 1:
         exit()
-    if sys.argv[1] == 'gen':
+    # Fetch and store from twitter to db.
+    if sys.argv[1] == 'fetch':
         assert len(sys.argv) == 4
         col = search = sys.argv[2]
         items = int(sys.argv[3])
         # Save tweets for a given query in the collection with same name
         # for simplicity and consistency.
-        tweets = generate_tweets(search, items, col)
-    elif sys.argv[1] == 'nogen':
+        fetch_tweets(search, items, col)
+
+        # Find the users that have at least MIN_TWEETS_USER tweets in our db.
+        # Also discard those with too many followers/friends.
+        user_names = get_usernames(col)
+        fetch_followers_and_friends(col, user_names)
+    # Compute authorities by inspecting db.
+    elif sys.argv[1] == 'compute':
         assert len(sys.argv) == 3
         col = search = sys.argv[2]
         find_authorities(search, col)
+    # See rate limit info.
     elif sys.argv[1] == 'stats':
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(api.rate_limit_status())

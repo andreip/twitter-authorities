@@ -1,4 +1,4 @@
-from helpers import get_config
+from helpers.helpers import get_config
 
 config = get_config()
 
@@ -41,6 +41,9 @@ class UserMetrics:
 # Minimum number of tweets a user must have in order to be
 # considered as potential authority in algorithm.
 MIN_TWEETS_USER = 10
+
+MAX_FRIENDS = 100000
+MAX_FOLLOWERS = 100000
 
 # MongoDB specifics.
 

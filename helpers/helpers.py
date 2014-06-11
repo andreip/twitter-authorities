@@ -10,6 +10,12 @@ def get_config(config_file='config.rc'):
         config.readfp(io.BytesIO(f.read()))
     return config
 
+def iterator_get_next(iterator):
+    try:
+        return iterator.next()
+    except StopIteration:
+        return None
+
 def similarity_texts(phrase1, phrase2):
     '''Phrase input is a list of words, not a string.
     Computes
