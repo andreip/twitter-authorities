@@ -220,21 +220,11 @@ def compute_user_features(screen_name, author_tweets, col):
 
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
-    # TODO: look into using
-    # > db.tweets_test2.aggregate({ $group : { _id : "$user.screen_name", tweets: { $push: { text: "$text" } } } })
-    # but with "$$ROOT"; see
-    # http://docs.mongodb.org/manual/reference/operator/aggregation/push/
-
-    # Use a simple tactic of finding all distinct users in the DB. Then get
-    # all tweets per user and compute the user's authoritiveness.
-    # Skip users with too few tweets.
-    users = db[col].distinct('user.screen_name')
-    for user in users:
-        tweets = db[col].find({'user.screen_name':  user})
-        if tweets.count() < MIN_TWEETS_USER:
-            continue
-
-        features = compute_user_features(user, tweets, col)
+    # Get a list of users that we need to consider as potential authorities
+    # about the given topic (from collection col).
+    for name in get_usernames(col):
+        tweets = db[col].find({'user.screen_name':  name})
+        features = compute_user_features(name, tweets, col)
         print features
 
 
@@ -243,6 +233,7 @@ def fetch_tweets(q, items, col, lang='en', rpp=100):
     tweets = tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).items(items)
     for tweet in tweets:
         db[col].update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
+
 
 def fetch_followers_and_friends(col, user_names):
     '''Fetch follower/friends for all distinct users present in
@@ -285,6 +276,13 @@ def fetch_followers_and_friends(col, user_names):
 
 
 def get_usernames(col):
+    '''Returns a list of users (strings) from collection that:
+       - wrote at least MIN_TWEETS_USER about the topic (we assume that
+         the collection holds data about only one given topic)
+       - does not have more than MAX_FRIENDS and MAX_FOLLOWERS, as
+         we need to get that list for some feathres and it's too time expensive
+         for now (twitter rate limit)
+    '''
     # http://docs.mongodb.org/manual/tutorial/aggregation-zip-code-data-set/
     user_names = db[col].aggregate([
                     {"$group": {"_id": "$user.screen_name",
