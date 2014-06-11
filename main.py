@@ -1,12 +1,16 @@
+#!/usr/bin/env python
+
 from collections import defaultdict
+import pprint
 import re
+import sys
 
 from bson.objectid import ObjectId
 import pymongo
-import tweepy
 
 from constants import *
 from helpers import similarity_score
+from patch_tweepy import *
 
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
@@ -199,6 +203,51 @@ def compute_user_stats(screen_name, col=COLLECTION):
     compute_user_stats_from_other_tweets(screen_name, user_metrics)
 
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
+    return user_metrics
 
-compute_user_stats('mishu21')
-#compute_user_stats('anpetre')
+def compute_user_features(scren_name, col=COLLECTION):
+    '''Compute the feature list based on some metrics for each author. See
+    IdentifyingTopicalAuthoritiesInMicroblogs.pdf paper for details.
+
+    TS - Topical Signal
+
+    '''
+    metrics = compute_user_stats('anpetre')
+
+def find_authorities(q, col):
+    '''Finds authorities for a given search.'''
+    pass
+
+def generate_tweets(q, items, col, lang='en', rpp=100):
+    print q, items, col
+    tweets = tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).items(items)
+    for tweet in tweets:
+        db[col].update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
+
+def exit():
+    print 'Call like: ' + sys.argv[0] +\
+          ' [gen search items][stats][nogen search]'
+    sys.exit(1)
+
+def main():
+    if len(sys.argv) == 1:
+        exit()
+    if sys.argv[1] == 'gen':
+        assert len(sys.argv) == 4
+        col = search = sys.argv[2]
+        items = int(sys.argv[3])
+        # Save tweets for a given query in the collection with same name
+        # for simplicity and consistency.
+        tweets = generate_tweets(search, items, col)
+    elif sys.argv[1] == 'nogen':
+        assert len(sys.argv) == 3
+        col = search = sys.argv[2]
+        find_authorities(search, col)
+    elif sys.argv[1] == 'stats':
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(api.rate_limit_status())
+    else:
+        exit()
+
+if __name__ == '__main__':
+    main()
