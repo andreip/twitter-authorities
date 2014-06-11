@@ -61,7 +61,7 @@ def get_user(screen_name, cached=True, col=COLLECTION_USERS):
     db[col].insert(user)
     return user
 
-def get_tweets(screen_name, col=COLLECTION):
+def get_tweets(screen_name, col):
     '''Try retrieving the tweets from db if we've got all of them.
     Otherwise just do an API call.
     '''
@@ -91,8 +91,8 @@ def get_tweets(screen_name, col=COLLECTION):
     print 'Done fetching and storing!'
     return db[col].find({'user.screen_name': screen_name})
 
-def get_tweet_type(tweet_id, col=COLLECTION):
-    cursor = db[COLLECTION].find({'id': tweet_id})
+def get_tweet_type(col, tweet_id):
+    cursor = db[col].find({'id': tweet_id})
     if cursor.count() > 0:
         tweet = cursor.next()
     else:
@@ -113,7 +113,7 @@ def get_tweet_type_from_text(tweet_text):
         return TweetType.RT
     return TweetType.OT
 
-def conversation_started_by_user(tweet):
+def conversation_started_by_user(col, tweet):
     '''Check if a tweet like "@john how are you man" is
     first started by john first or by the author itself.
     '''
@@ -124,44 +124,56 @@ def conversation_started_by_user(tweet):
     # Else it's still a possibility that he replied to a non
     # conversational tweet (!= CT), in which case he yet again
     # started the discussion.
-    reply_to_type = get_tweet_type(tweet['in_reply_to_status_id'])
+    reply_to_type = get_tweet_type(col, tweet['in_reply_to_status_id'])
     return reply_to_type != TweetType.CT
 
-def compute_user_metrics_from_own_tweets(screen_name, author_tweets,
+def get_retweeters(col, screen_name):
+    '''Search db for patterns like RT @screen_name: and count
+    the number of users.
+    '''
+    users = db[col].find({'text': {"$regex" : '.*RT @' + screen_name + '.*'}},
+                         {'user.screen_name': 1})
+    return map(lambda u: u['user']['screen_name'], users)
+
+def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics):
-    tweets = get_tweets(screen_name, col)
+    tweets = db[col].find({'user.screen_name': screen_name}).sort('id',
+                          pymongo.ASCENDING)
     retweeters, users_mentioned = [], []
     original_texts = []
+    actual_retweeters = 0
 
     for tweet in author_tweets:
         tweet_type = get_tweet_type_from_text(tweet['text'])
         user_metrics[tweet_type] += 1
         # Find out if conversation was started by crt user.
         if tweet_type == TweetType.CT:
-            if conversation_started_by_user(tweet):
-                 user_metrics[UserMetrics.CT2] += 1
+            user_metrics[UserMetrics.CT1] += 1
+            if conversation_started_by_user(col, tweet):
+                user_metrics[UserMetrics.CT2] += 1
         elif tweet_type == TweetType.OT:
+            user_metrics[UserMetrics.OT1] += 1
+            # Count the number of URLs one shares in his tweets.
+            user_metrics[UserMetrics.OT2] += len(tweet['entities']['urls'])
+
             # Mark the fact that this tweet has been retweeted at least once.
             if tweet['retweet_count'] > 0:
                 user_metrics[UserMetrics.RT2] += 1
-                # Keep a record of all the users that retweeded author's
-                # tweets. This way we can compute the nr of unique retweeters.
-                retweeters += map(lambda x: x['user']['screen_name'],
-                                  api.retweets(tweet['id']))
+            actual_retweeters += tweet['retweet_count']
+
             # For each original tweet, check if it's got any mentions of other
             # users.
             for user_mention in tweet['entities']['user_mentions']:
                 users_mentioned.append(user_mention['screen_name'])
 
-            # Count the number of URLs one shares in his tweets.
-            user_metrics[UserMetrics.OT2] += len(tweet['entities']['urls'])
-
             # Count how many hashtags one has used in all the tweets.
             for hashtag in tweet['entities']['hashtags']:
-                print hashtag, tweet['text']
                 user_metrics[UserMetrics.OT4] += 1
             original_texts.append(tweet['text'])
 
+    # Find in db all the authors that retweeted a given user.
+    retweeters = get_retweeters(col, screen_name)
+    print 'Retweeters found, actual: ', len(retweeters), actual_retweeters
     # Update the number of unique users that retweeted current users's tweets.
     user_metrics[UserMetrics.RT3] = len(set(retweeters))
     # Count the nr of users mentioned by the author; and also unique.
@@ -196,26 +208,28 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     user_metrics[UserMetrics.M3] = len(users_mentioning_author)
     user_metrics[UserMetrics.M4] = len(set(users_mentioning_author))
 
-def compute_user_metrics(screen_name, author_tweets, col):
+def compute_user_metrics(screen_name, col, author_tweets):
     user_metrics = defaultdict(int)
     # Based on author's tweets.
-    compute_user_metrics_from_own_tweets(screen_name, author_tweets,
+    compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics)
     # Based on what others are saying about author.
-    compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
+
+    #TODO: fix M3,M4 metrics
+    #compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
 
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
     return user_metrics
 
 
-def compute_user_features(screen_name, author_tweets, col):
+def compute_user_features(screen_name, col, author_tweets):
     '''Compute the feature list based on some metrics for each author. See
     IdentifyingTopicalAuthoritiesInMicroblogs.pdf paper for details.
 
     TS - Topical Signal
 
     '''
-    metrics = compute_user_metrics(screen_name, author_tweets, col)
+    metrics = compute_user_metrics(screen_name, col, author_tweets)
 
 
 def find_authorities(q, col):
@@ -224,8 +238,8 @@ def find_authorities(q, col):
     # about the given topic (from collection col).
     for name in get_usernames(col):
         tweets = db[col].find({'user.screen_name':  name})
-        features = compute_user_features(name, tweets, col)
-        print features
+        features = compute_user_features(name, col, tweets)
+        #print 'Features', features
 
 
 def fetch_tweets(q, items, col, lang='en', rpp=100):
