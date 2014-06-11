@@ -38,6 +38,10 @@ class UserMetrics:
     M1, M2, M3, M4 = range(7, 11)
     OT3, OT4 = range(11, 13)
 
+# Minimum number of tweets a user must have in order to be
+# considered as potential authority in algorithm.
+MIN_TWEETS_USER = 10
+
 # MongoDB specifics.
 
 SAMPLE_COLLECTION = 'tweets_en'

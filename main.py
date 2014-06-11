@@ -205,6 +205,7 @@ def compute_user_stats(screen_name, col=COLLECTION):
     print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
     return user_metrics
 
+
 def compute_user_features(scren_name, col=COLLECTION):
     '''Compute the feature list based on some metrics for each author. See
     IdentifyingTopicalAuthoritiesInMicroblogs.pdf paper for details.
@@ -214,9 +215,26 @@ def compute_user_features(scren_name, col=COLLECTION):
     '''
     metrics = compute_user_stats('anpetre')
 
+
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
-    pass
+    # TODO: look into using
+    # > db.tweets_test2.aggregate({ $group : { _id : "$user.screen_name", tweets: { $push: { text: "$text" } } } })
+    # but with "$$ROOT"; see
+    # http://docs.mongodb.org/manual/reference/operator/aggregation/push/
+
+    # Use a simple tactic of finding all distinct users in the DB. Then get
+    # all tweets per user and compute the user's authoritiveness.
+    # Skip users with too few tweets.
+    users = db[col].distinct('user.screen_name')
+    for user in users:
+        tweets = db[col].find({'user.screen_name':  user})
+        if tweets.count() < MIN_TWEETS_USER:
+            continue
+
+        features = compute_user_features(user, tweets)
+        print features
+
 
 def generate_tweets(q, items, col, lang='en', rpp=100):
     print q, items, col
@@ -224,10 +242,12 @@ def generate_tweets(q, items, col, lang='en', rpp=100):
     for tweet in tweets:
         db[col].update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
 
+
 def exit():
     print 'Call like: ' + sys.argv[0] +\
           ' [gen search items][stats][nogen search]'
     sys.exit(1)
+
 
 def main():
     if len(sys.argv) == 1:
