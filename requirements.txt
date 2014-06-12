@@ -3,6 +3,7 @@ Flask==0.10.1
 Flask-SQLAlchemy==1.0
 Jinja2==2.7.1
 MarkupSafe==0.18
+#http://www.sandersnewmedia.com/why/2012/04/16/installing-pil-virtualenv-ubuntu-1204-precise-pangolin/
 PIL==1.1.7
 PyYAML==3.11
 SQLAlchemy==0.8.3
