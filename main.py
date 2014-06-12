@@ -151,6 +151,8 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
             for hashtag in tweet['entities']['hashtags']:
                 user_metrics[UserMetrics.OT4] += 1
             original_texts.append(tweet['text'])
+        elif tweet_type == TweetType.RT:
+            user_metrics[UserMetrics.RT1] += 1
 
     # Find in db all the authors that retweeted a given user.
     retweeters = get_retweeters(col, screen_name)
