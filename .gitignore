@@ -1,3 +1,4 @@
 *.sw*
 *.pyc
 config.rc
+config.bak
