@@ -77,6 +77,7 @@ def get_tweet_type(col, tweet_id):
     else:
         print 'Fetching tweet id ' + str(tweet_id)
         tweet = api.get_status(tweet_id)
+        time.sleep(5)
         db[col].update({'id': tweet['id']}, tweet, upsert=True)
     return get_tweet_type_from_text(tweet['text'])
 
