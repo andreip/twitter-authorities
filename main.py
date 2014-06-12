@@ -242,11 +242,20 @@ def find_authorities(q, col):
         #print 'Features', features
 
 
-def fetch_tweets(q, items, col, lang='en', rpp=100):
-    print q, items, col
-    tweets = tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).items(items)
-    for tweet in tweets:
-        db[col].update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
+def fetch_tweets(q, pages, col, lang='en', rpp=100):
+    print 'Fetch tweets', q, pages, col
+    page_count = 0
+    for tweets in tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).pages():
+        db[col].insert(map(lambda tweet: tweet.raw, tweets))
+        page_count += 1
+        if page_count >= pages:
+            print 'stop after fetching page',page_count
+            break
+        if page_count % 10 == 0:
+            print 'Fetched pages', page_count
+        # Avoid rate limit.
+        time.sleep(5)
+    print 'Done.'
 
 
 def fetch_followers_and_friends(col, user_names):
@@ -322,7 +331,7 @@ def get_usernames(col):
 
 def exit():
     print 'Call like: ' + sys.argv[0] +\
-          ' [fetch search items][stats][compute search]'
+          ' [fetch search pages][stats][compute search]'
     sys.exit(1)
 
 
@@ -333,10 +342,10 @@ def main():
     if sys.argv[1] == 'fetch':
         assert len(sys.argv) == 4
         col = search = sys.argv[2]
-        items = int(sys.argv[3])
+        pages = int(sys.argv[3])
         # Save tweets for a given query in the collection with same name
         # for simplicity and consistency.
-        fetch_tweets(search, items, col)
+        fetch_tweets(search, pages, col)
 
         # Find the users that have at least MIN_TWEETS_USER tweets in our db.
         # Also discard those with too many followers/friends.
