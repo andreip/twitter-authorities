@@ -1,5 +1,6 @@
 import ConfigParser
 import io
+
 from preprocess_words import process_text
 
 def get_config(config_file='config.rc'):
@@ -55,6 +56,11 @@ def similarity_score(texts):
     '''
     texts = filter(lambda x: len(x) > 0, map(process_text, texts))
     n = len(texts)
+
+    # Edge case to avoid dividing by 0 when it has 0 or 1 posts.
+    if n < 2:
+        return 0
+
     s = 0
     for i in range(0,n):
         for j in range(0,i):
