@@ -227,11 +227,18 @@ def fetch_tweets(q, pages, col, lang='en', rpp=100):
     print 'Fetch tweets', q, pages, col
     # Make sure db is clean.
     db[col].remove({})
-    cursor = tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).pages(pages)
-    for i, tweets in enumerate(cursor):
-        db[col].insert(map(lambda tweet: tweet.raw, tweets))
-        if i % 10 == 0:
-            print 'Fetched pages', i
+    page_count = 0
+    max_id = None
+    while page_count < pages:
+        tweets = api.search(q=q, lang=lang, count=rpp, max_id=max_id)['statuses']
+        db[col].insert(tweets)
+        page_count += 1
+        # Find the minimum "id" of the tweet stored in DB, and use that as
+        # max_id so we get only older results than those we already got.
+        res = db[col].aggregate({"$group": {"_id": 0, "max_id": {"$min": "$id"}}})
+        max_id = res['result'][0]['max_id'] - 1
+        if page_count % 10 == 0:
+            print 'Fetched pages', page_count
         # Avoid rate limit.
         time.sleep(5)
     print 'Done.'
