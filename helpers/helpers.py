@@ -66,3 +66,15 @@ def similarity_score(texts):
         for j in range(0,i):
             s += similarity_texts(texts[i], texts[j])
     return 2 * s / float(n * (n-1))
+
+def pretty_metrics(user_metrics):
+    '''Input a dict, output a dict but with keys
+    from {2: 12, ... } to {'RT1': 12, .. }, so using
+    the UserMetrics to prettify the keys.
+    '''
+    from constants import UserMetrics
+    res = {}
+    for k,v in user_metrics.items():
+        label = filter(lambda x : x[1] == k, UserMetrics.__dict__.items())[0]
+        res[label[0]] = v
+    return res

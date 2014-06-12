@@ -10,7 +10,8 @@ from bson.objectid import ObjectId
 import pymongo
 
 from constants import *
-from helpers.helpers import similarity_score, iterator_get_next
+from helpers.helpers import (similarity_score, iterator_get_next,
+                             pretty_metrics)
 from helpers.mongo import followers_col, friends_col
 from patch_tweepy import *
 
@@ -24,28 +25,6 @@ api2 = tweepy.API(auth)
 
 conn = pymongo.MongoClient("mongodb://localhost")
 db = conn[DATABASE_NAME]
-
-## Show rate limit info
-#print api.rate_limit_status()
-
-## Find a tweet
-#tweet = db.tweets_test.find_one({"id" : 400009508526632960})
-
-## Search tweets for query and save them in mongo
-#public_tweets = tweepy.Cursor(api.search, q="roland garros", lang='en',rpp=100).items(2000)
-#for tweet in public_tweets:
-#    print tweet.text
-#    #db.tweets_en.update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
-
-## Gather user's tweets
-#public_tweets = tweepy.Cursor(api.user_timeline, screen_name='mishu21').items(200)
-#for tweet in public_tweets:
-#    print tweet.text, tweet.id
-#    #db.tweets_en.update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
-#    db.tweets_test.update({'id': tweet.raw['id']}, tweet.raw, upsert=True)
-
-#def get_user_stats(screen_name):
-#    public_tweets = tweepy.Cursor(api.user_timeline, screen_name='anpetre')
 
 def get_user(screen_name, cached=True, col=COLLECTION_USERS):
     '''In case cached=True try retrieving the user from db.
@@ -137,6 +116,7 @@ def get_retweeters(col, screen_name):
 
 def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics):
+    print 'Compute metrics for', screen_name
     tweets = db[col].find({'user.screen_name': screen_name}).sort('id',
                           pymongo.ASCENDING)
     retweeters, users_mentioned = [], []
@@ -218,7 +198,8 @@ def compute_user_metrics(screen_name, col, author_tweets):
     #TODO: fix M3,M4 metrics
     #compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
 
-    print 'Type summary for user ' + screen_name + ': ' + str(user_metrics)
+    print 'Type summary for user ' + screen_name + ': ' +\
+          str(pretty_metrics(user_metrics))
     return user_metrics
 
 
@@ -244,17 +225,13 @@ def find_authorities(q, col):
 
 def fetch_tweets(q, pages, col, lang='en', rpp=100):
     print 'Fetch tweets', q, pages, col
-    page_count = 0
     # Make sure db is clean.
     db[col].remove({})
-    for tweets in tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).pages():
+    cursor = tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).pages(pages)
+    for i, tweets in enumerate(cursor):
         db[col].insert(map(lambda tweet: tweet.raw, tweets))
-        page_count += 1
-        if page_count >= pages:
-            print 'stop after fetching page',page_count
-            break
-        if page_count % 10 == 0:
-            print 'Fetched pages', page_count
+        if i % 10 == 0:
+            print 'Fetched pages', i
         # Avoid rate limit.
         time.sleep(5)
     print 'Done.'
