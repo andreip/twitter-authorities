@@ -245,6 +245,8 @@ def find_authorities(q, col):
 def fetch_tweets(q, pages, col, lang='en', rpp=100):
     print 'Fetch tweets', q, pages, col
     page_count = 0
+    # Make sure db is clean.
+    db[col].remove({})
     for tweets in tweepy.Cursor(api2.search, q=q, lang=lang, rpp=rpp).pages():
         db[col].insert(map(lambda tweet: tweet.raw, tweets))
         page_count += 1
