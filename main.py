@@ -215,7 +215,7 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     user_metrics[UserMetrics.M4] = len(set(users_mentioning))
 
 def compute_user_metrics(screen_name, col):
-    metrics = db[metrics_col(col)].findOne({'_id': screen_name})
+    metrics = db[metrics_col(col)].find_one({'_id': screen_name})
     if metrics:
         return metrics['metrics']
 
