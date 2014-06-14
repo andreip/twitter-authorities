@@ -33,10 +33,10 @@ class UserMetrics:
      * M3  - Number of mentions by others of the author
      * M4  - Number of unique users mentioning the author
     '''
-    OT1, CT1, RT1 = TweetType.OT, TweetType.CT, TweetType.RT
-    OT2, CT2, RT2, RT3 = range(3, 7)
-    M1, M2, M3, M4 = range(7, 11)
-    OT3, OT4 = range(11, 13)
+    OT1, OT2, OT3, OT4 = 'OT1', 'OT2', 'OT3', 'OT4'
+    CT1, CT2 = 'CT1', 'CT2'
+    RT1, RT2, RT3 = 'RT1', 'RT2', 'RT3'
+    M1, M2, M3, M4 = 'M1', 'M2', 'M3', 'M4'
 
 # Minimum number of tweets a user must have in order to be
 # considered as potential authority in algorithm.

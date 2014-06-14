@@ -3,3 +3,6 @@ def followers_col(col):
 
 def friends_col(col):
     return col + '_friends'
+
+def metrics_col(col):
+    return col + '_metrics'

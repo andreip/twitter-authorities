@@ -10,9 +10,8 @@ from bson.objectid import ObjectId
 import pymongo
 
 from constants import *
-from helpers.helpers import (similarity_score, iterator_get_next,
-                             pretty_metrics)
-from helpers.mongo import followers_col, friends_col
+from helpers.helpers import similarity_score, iterator_get_next
+from helpers.mongo import *
 from patch_tweepy import *
 
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -153,7 +152,6 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
 
     for tweet in author_tweets:
         tweet_type = get_tweet_type_from_text(tweet['text'])
-        user_metrics[tweet_type] += 1
         # Find out if conversation was started by crt user.
         if tweet_type == TweetType.CT:
             user_metrics[UserMetrics.CT1] += 1
@@ -225,7 +223,13 @@ def compute_user_metrics(screen_name, col):
     compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
 
     print 'Type summary for user ' + screen_name + ': ' +\
-          str(pretty_metrics(user_metrics))
+          str(user_metrics)
+
+    # Store metric in DB.
+    db[metrics_col(col)].update({'_id': screen_name},
+                                {'_id': screen_name, 'metrics': user_metrics},
+                                upsert=True)
+
     return user_metrics
 
 
