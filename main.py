@@ -214,6 +214,22 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     user_metrics[UserMetrics.M3] = len(users_mentioning)
     user_metrics[UserMetrics.M4] = len(set(users_mentioning))
 
+def compute_graph_user_metrics(screen_name, col, user_metrics):
+    print 'Computing topically active followers',
+    followers = db[followers_col(col)].find_one({'name': screen_name})
+    print 'from ' + str(len(followers['ids'])) + ' followers'
+    topic_active_followers = db[col].find({'id': {'$in': followers['ids']}},
+                                          {'id': 1})
+
+    print 'Computing topically active friends',
+    friends = db[friends_col(col)].find_one({'name': screen_name})
+    print 'from ' + str(len(friends['ids'])) + ' friends'
+    topic_active_friends = db[col].find({'id': {'$in': friends['ids']}},
+                                        {'id': 1})
+
+    user_metrics[UserMetrics.G1] = topic_active_followers.count()
+    user_metrics[UserMetrics.G2] = topic_active_followers.count()
+
 def compute_user_metrics(screen_name, col):
     metrics = db[metrics_col(col)].find_one({'_id': screen_name})
     if metrics:
@@ -224,6 +240,8 @@ def compute_user_metrics(screen_name, col):
     compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics)
     compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
+    #TODO
+    #compute_graph_user_metrics(screen_name, col, user_metrics)
 
     print 'Type summary for user ' + screen_name + ': ' +\
           str(user_metrics)
