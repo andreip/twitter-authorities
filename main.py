@@ -115,6 +115,33 @@ def get_retweeters(col, screen_name):
                          {'user.screen_name': 1})
     return map(lambda u: u['user']['screen_name'], users)
 
+def get_user_mentions(tweet, tweet_type):
+    '''Get accurate mentions by ignoring semantic header.
+    * 'RT @user: The awesome news' becomes 'The awesome news'
+      because RT @user is added automatically
+    * '@google how awesome is your post!' -> removes '@google' from the start
+      the '@google' part is added by twitter automatically if you reply
+      to the post
+    * '@yale, I like how you've been doing lately!'
+      this is not a reply to a specific post, it's thus a mention, we
+      don't strip @yale from beginning
+    '''
+    ignore_start_indices = []
+    if tweet_type == TweetType.CT and tweet['in_reply_to_status_id']:
+        ignore_start_indices.append(0)
+    elif tweet_type == TweetType.RT:
+        index = "RT @...".index('@')
+        ignore_start_indices.append(index)
+
+    result = []
+    for user_mention in tweet['entities']['user_mentions']:
+        start_index_of_mention = user_mention['indices'][0]
+        # Skip the mentions that we want to ignore due to semantic header
+        # added by twitter automatically.
+        if not start_index_of_mention in ignore_start_indices:
+            result.append(user_mention['screen_name'])
+    return result
+
 def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics):
     print 'Compute metrics for', screen_name
@@ -136,23 +163,22 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
             user_metrics[UserMetrics.OT1] += 1
             # Count the number of URLs one shares in his tweets.
             user_metrics[UserMetrics.OT2] += len(tweet['entities']['urls'])
+            # Count how many hashtags one has used in all the tweets.
+            for hashtag in tweet['entities']['hashtags']:
+                user_metrics[UserMetrics.OT4] += 1
 
             # Mark the fact that this tweet has been retweeted at least once.
             if tweet['retweet_count'] > 0:
                 user_metrics[UserMetrics.RT2] += 1
             actual_retweeters += tweet['retweet_count']
 
-            # For each original tweet, check if it's got any mentions of other
-            # users.
-            for user_mention in tweet['entities']['user_mentions']:
-                users_mentioned.append(user_mention['screen_name'])
-
-            # Count how many hashtags one has used in all the tweets.
-            for hashtag in tweet['entities']['hashtags']:
-                user_metrics[UserMetrics.OT4] += 1
             original_texts.append(tweet['text'])
         elif tweet_type == TweetType.RT:
             user_metrics[UserMetrics.RT1] += 1
+
+        # For each original tweet, check if it's got any mentions of other
+        # users.
+        users_mentioned += get_user_mentions(tweet, tweet_type)
 
     # Find in db all the authors that retweeted a given user.
     retweeters = get_retweeters(col, screen_name)
