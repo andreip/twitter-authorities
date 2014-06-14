@@ -198,13 +198,15 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     present in db, hoping almost every mentioned has been gathered as
     it's related to the topic.
     '''
-    # Query for all the users mentioning an author and count the number of
-    # distinct users, as well as total mentiones.
-    users_mentioning = db[col].find({'$or': [
-        {'text': {'$regex': '[^@]+@' + screen_name + '.*'}},
-        {'text': {'$regex': '.*@' + screen_name + '.*'},
-         'in_reply_to_status_id': None}
-        ]},
+    # Get all the mentions of the @screen_name user.
+    users_mentioning = db[col].find({'text':
+        # Don't begin with '@screen_name'.
+        {'$regex': '^(?!@' + screen_name + ')' +\
+                   # Don't begin with 'RT @screen_name' either.
+                   '(?!RT @' + screen_name + ')' +\
+                   # Characters follow and then '@screen_name' must follow too.
+                   '.+@' + screen_name + '.*'
+        }},
         {'user.screen_name': 1}
     )
     users_mentioning = map(lambda u: u['user']['screen_name'], users_mentioning)
