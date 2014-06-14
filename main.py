@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from collections import defaultdict
+import math
 import pprint
 import re
 import sys
@@ -154,25 +155,25 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
         tweet_type = get_tweet_type_from_text(tweet['text'])
         # Find out if conversation was started by crt user.
         if tweet_type == TweetType.CT:
-            user_metrics[UserMetrics.CT1] += 1
+            user_metrics[UM.CT1] += 1
             if conversation_started_by_user(col, tweet):
-                user_metrics[UserMetrics.CT2] += 1
+                user_metrics[UM.CT2] += 1
         elif tweet_type == TweetType.OT:
-            user_metrics[UserMetrics.OT1] += 1
+            user_metrics[UM.OT1] += 1
             # Count the number of URLs one shares in his tweets.
-            user_metrics[UserMetrics.OT2] += len(tweet['entities']['urls'])
+            user_metrics[UM.OT2] += len(tweet['entities']['urls'])
             # Count how many hashtags one has used in all the tweets.
             for hashtag in tweet['entities']['hashtags']:
-                user_metrics[UserMetrics.OT4] += 1
+                user_metrics[UM.OT4] += 1
 
             # Mark the fact that this tweet has been retweeted at least once.
             if tweet['retweet_count'] > 0:
-                user_metrics[UserMetrics.RT2] += 1
+                user_metrics[UM.RT2] += 1
             actual_retweeters += tweet['retweet_count']
 
             original_texts.append(tweet['text'])
         elif tweet_type == TweetType.RT:
-            user_metrics[UserMetrics.RT1] += 1
+            user_metrics[UM.RT1] += 1
 
         # For each original tweet, check if it's got any mentions of other
         # users.
@@ -182,15 +183,15 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
     retweeters = get_retweeters(col, screen_name)
     print 'Retweeters found, actual: ', len(retweeters), actual_retweeters
     # Update the number of unique users that retweeted current users's tweets.
-    user_metrics[UserMetrics.RT3] = len(set(retweeters))
+    user_metrics[UM.RT3] = len(set(retweeters))
     # Count the nr of users mentioned by the author; and also unique.
-    user_metrics[UserMetrics.M1] = len(users_mentioned)
-    user_metrics[UserMetrics.M2] = len(set(users_mentioned))
+    user_metrics[UM.M1] = len(users_mentioned)
+    user_metrics[UM.M2] = len(set(users_mentioned))
 
     # Computing the OT3 score on the author's tweets. See repo
     # paper IdentifyingTopicalAuthoritiesInMicroblogs.pdf for details.
     score = similarity_score(original_texts)
-    user_metrics[UserMetrics.OT3] = score
+    user_metrics[UM.OT3] = score
 
 def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     '''Find tweets that mention the author. We'll search only for those
@@ -211,8 +212,8 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     # him.
     users_mentioning = filter(lambda u: u != screen_name, users_mentioning)
 
-    user_metrics[UserMetrics.M3] = len(users_mentioning)
-    user_metrics[UserMetrics.M4] = len(set(users_mentioning))
+    user_metrics[UM.M3] = len(users_mentioning)
+    user_metrics[UM.M4] = len(set(users_mentioning))
 
 def compute_graph_user_metrics(screen_name, col, user_metrics):
     print 'Computing topically active followers',
@@ -227,13 +228,13 @@ def compute_graph_user_metrics(screen_name, col, user_metrics):
     topic_active_friends = db[col].find({'id': {'$in': friends['ids']}},
                                         {'id': 1})
 
-    user_metrics[UserMetrics.G1] = topic_active_followers.count()
-    user_metrics[UserMetrics.G2] = topic_active_followers.count()
+    user_metrics[UM.G1] = topic_active_followers.count()
+    user_metrics[UM.G2] = topic_active_followers.count()
 
 def compute_user_metrics(screen_name, col):
     metrics = db[metrics_col(col)].find_one({'_id': screen_name})
     if metrics:
-        return metrics['metrics']
+        return defaultdict(int, metrics['metrics'])
 
     user_metrics = defaultdict(int)
     author_tweets = db[col].find({'user.screen_name':  screen_name})
@@ -243,8 +244,7 @@ def compute_user_metrics(screen_name, col):
     #TODO
     #compute_graph_user_metrics(screen_name, col, user_metrics)
 
-    print 'Type summary for user ' + screen_name + ': ' +\
-          str(user_metrics)
+    print '[' + screen_name + '] METRICS: ' + str(user_metrics)
 
     # Store metric in DB.
     db[metrics_col(col)].update({'_id': screen_name},
@@ -256,12 +256,35 @@ def compute_user_metrics(screen_name, col):
 
 def compute_user_features(screen_name, col):
     '''Compute the feature list based on some metrics for each author. See
-    IdentifyingTopicalAuthoritiesInMicroblogs.pdf paper for details.
-
-    TS - Topical Signal
-
+    UF class for details on features (constants specific file).
     '''
     metrics = compute_user_metrics(screen_name, col)
+    features = {}
+
+    user_tweet = db[col].find_one({'user.screen_name': screen_name})
+    total_tweets = user_tweet['user']['statuses_count']
+    #from nose.tools import set_trace; set_trace()
+    features[UF.TS] = metrics[UM.OT1] + metrics[UM.CT1] + metrics[UM.RT1]
+    features[UF.TS] /= float(total_tweets)
+
+    features[UF.SS] = 0 if not metrics[UM.OT1]\
+                        else metrics[UM.OT1] / float(metrics[UM.OT1] +
+                                                     metrics[UM.RT1])
+
+    nCS1 = 0 if not metrics[UM.OT1]\
+             else metrics[UM.OT1] / float(metrics[UM.OT1] + metrics[UM.CT1])
+    nCS2 = (metrics[UM.CT1] - metrics[UM.CT2]) / float(metrics[UM.CT1] + 1)
+    features[UF.nCS] = nCS1 + nCS_LAMBDA * nCS2
+
+    # Avoid doing log(0), so edge case here.
+    features[UF.RI] = 0 if not metrics[UM.RT3] \
+                        else metrics[UM.RT2] * math.log(metrics[UM.RT3])
+
+    MI1 = 0 if not metrics[UM.M4] else metrics[UM.M3] * math.log(metrics[UM.M4])
+    MI2 = 0 if not metrics[UM.M2] else metrics[UM.M1] * math.log(metrics[UM.M2])
+    features[UF.MI] = max(MI1 - MI2, 0)
+
+    print '[' + screen_name + '] FEATURES: ' + str(features)
 
 
 def find_authorities(q, col):
