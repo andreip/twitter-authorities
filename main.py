@@ -195,51 +195,48 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
     user_metrics[UserMetrics.OT3] = score
 
 def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
-    '''Find tweets that mention the author. These we'll not keep
-    in the db for simplicity. The tactic here would be to (for future #TODO):
-     * gather everythong and store in DB
-     * make api calls only for those with since_id > the biggest id we could
-       find in our DB matching @screen_name.
-
-    But for now, just do an api call all the time.
+    '''Find tweets that mention the author. We'll search only for those
+    present in db, hoping almost every mentioned has been gathered as
+    it's related to the topic.
     '''
-    users_mentioning_author = []
-    # Get all the authors that mention "@screen_name" by using search API.
-    # We actually also have to check so those are no CT (conversational type);
-    # as it turns out the API is inexact and also brings some CTs. Moreover,
-    # it does not return all mentions :(, but will have to
-    # do as I've found no better option.
-    tweets = tweepy.Cursor(api2.search, q="@" + screen_name, rpp=100).items()
-    for tweet in tweets:
-        tweet_type = get_tweet_type_from_text(tweet.text)
-        if tweet_type == TweetType.OT:
-            users_mentioning_author.append(tweet.user.screen_name)
-    user_metrics[UserMetrics.M3] = len(users_mentioning_author)
-    user_metrics[UserMetrics.M4] = len(set(users_mentioning_author))
+    # Query for all the users mentioning an author and count the number of
+    # distinct users, as well as total mentiones.
+    users_mentioning = db[col].find({'$or': [
+        {'text': {'$regex': '[^@]+@' + screen_name + '.*'}},
+        {'text': {'$regex': '.*@' + screen_name + '.*'},
+         'in_reply_to_status_id': None}
+        ]},
+        {'user.screen_name': 1}
+    )
+    users_mentioning = map(lambda u: u['user']['screen_name'], users_mentioning)
+    # Exclude own mentions (it may be a user retweets someone who mentioned
+    # him.
+    users_mentioning = filter(lambda u: u != screen_name, users_mentioning)
 
-def compute_user_metrics(screen_name, col, author_tweets):
+    user_metrics[UserMetrics.M3] = len(users_mentioning)
+    user_metrics[UserMetrics.M4] = len(set(users_mentioning))
+
+def compute_user_metrics(screen_name, col):
     user_metrics = defaultdict(int)
-    # Based on author's tweets.
+
+    author_tweets = db[col].find({'user.screen_name':  screen_name})
     compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics)
-    # Based on what others are saying about author.
-
-    #TODO: fix M3,M4 metrics
-    #compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
+    compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
 
     print 'Type summary for user ' + screen_name + ': ' +\
           str(pretty_metrics(user_metrics))
     return user_metrics
 
 
-def compute_user_features(screen_name, col, author_tweets):
+def compute_user_features(screen_name, col):
     '''Compute the feature list based on some metrics for each author. See
     IdentifyingTopicalAuthoritiesInMicroblogs.pdf paper for details.
 
     TS - Topical Signal
 
     '''
-    metrics = compute_user_metrics(screen_name, col, author_tweets)
+    metrics = compute_user_metrics(screen_name, col)
 
 
 def find_authorities(q, col):
@@ -247,8 +244,7 @@ def find_authorities(q, col):
     # Get a list of users that we need to consider as potential authorities
     # about the given topic (from collection col).
     for name in get_usernames(col):
-        tweets = db[col].find({'user.screen_name':  name})
-        features = compute_user_features(name, col, tweets)
+        features = compute_user_features(name, col)
         #print 'Features', features
 
 
