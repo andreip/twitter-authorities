@@ -215,8 +215,11 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     user_metrics[UserMetrics.M4] = len(set(users_mentioning))
 
 def compute_user_metrics(screen_name, col):
-    user_metrics = defaultdict(int)
+    metrics = db[metrics_col(col)].findOne({'_id': screen_name})
+    if metrics:
+        return metrics['metrics']
 
+    user_metrics = defaultdict(int)
     author_tweets = db[col].find({'user.screen_name':  screen_name})
     compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics)
@@ -305,11 +308,11 @@ def fetch_followers_and_friends(col, user_names):
                 if not page or len(page['ids']) < 5000:
                     have_followers = False
             time.sleep(60)
-        db[friends_col(col)].update({'name': name},
-                                   {'name': name, 'ids': friends_ids},
+        db[friends_col(col)].update({'_id': name},
+                                   {'_id': name, 'ids': friends_ids},
                                    upsert=True)
-        db[followers_col(col)].update({'name': name},
-                                     {'name': name, 'ids': followers_ids},
+        db[followers_col(col)].update({'_id': name},
+                                     {'_id': name, 'ids': followers_ids},
                                      upsert=True)
 
 
