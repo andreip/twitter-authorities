@@ -352,10 +352,9 @@ def fetch_tweets(q, pages, col, lang='en', rpp=100):
         tweets = api.search(q=q, lang=lang, count=rpp, max_id=max_id)['statuses']
         db[col].insert(tweets)
         page_count += 1
-        # Find the minimum "id" of the tweet stored in DB, and use that as
-        # max_id so we get only older results than those we already got.
-        res = db[col].aggregate({"$group": {"_id": 0, "max_id": {"$min": "$id"}}})
-        max_id = res['result'][0]['max_id'] - 1
+        # Update the max_id based on those fetched, as twitter returns
+        # tweets in id descending order.
+        max_id = tweets[-1]['id'] - 1
         if page_count % 10 == 0:
             print 'Fetched pages', page_count
         # Avoid rate limit.
