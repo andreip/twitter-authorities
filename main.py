@@ -7,6 +7,14 @@ import re
 import sys
 import time
 
+import matplotlib
+matplotlib.use('TkAgg')
+
+import numpy as np
+import pylab as pl
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import scale
+
 from bson.objectid import ObjectId
 import pymongo
 
@@ -287,15 +295,48 @@ def compute_user_features(screen_name, col):
     features[UF.MI] = max(MI1 - MI2, 0)
 
     print '[' + screen_name + '] FEATURES: ' + str(features)
+    return features
+
+
+def plot_features(mapping, col):
+    # Create a matrix in np format.
+    names = mapping.keys()
+    data = np.vstack(map(lambda m: np.array(m.values()),
+                     mapping.values())).astype(np.float)
+    # Now all features can all be scaled appropriately.
+    data = scale(data)
+    reduced_data = PCA(n_components=2).fit_transform(data)
+
+    # Store reduced features in db {name, points} so we can the
+    # find users associated to them.
+    for i, name in enumerate(names):
+        db[rfeatures_col(col)].update({'_id': name},
+                                      {'_id': name,
+                                       'rfsx': reduced_data[i][0],
+                                       'rfsy': reduced_data[i][1]
+                                      },
+                                      upsert=True)
+
+    pl.figure(figsize=(14, 9.5))
+    pl.title('Plot Users\' Features', size=18)
+    pl.scatter(reduced_data[:, 0], reduced_data[:, 1], s=10)
+
+    pl.xlim(-2, 2)
+    pl.ylim(-2, 2)
+    pl.xticks(())
+    pl.yticks(())
+    pl.show()
 
 
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
     # Get a list of users that we need to consider as potential authorities
     # about the given topic (from collection col).
+    mapping = {}
     for name in get_usernames(col):
         features = compute_user_features(name, col)
-        #print 'Features', features
+        mapping[name] = features
+    plot_features(mapping, col)
 
 
 def fetch_tweets(q, pages, col, lang='en', rpp=100):

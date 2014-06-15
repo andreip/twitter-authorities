@@ -6,3 +6,6 @@ def friends_col(col):
 
 def metrics_col(col):
     return col + '_metrics'
+
+def rfeatures_col(col):
+    return col + '_rfeatures'

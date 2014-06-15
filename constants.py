@@ -78,7 +78,7 @@ class UF:
          said about others too.
          Estimates how much an author is genuinely mentioned.
     '''
-    TS, SS, nCS, RI, MI = 'TS', 'SS', 'nCS', 'RI', 'MI'
+    TS, SS, nCS, RI, MI = range(5)
 
 # Minimum number of tweets a user must have in order to be
 # considered as potential authority in algorithm.
