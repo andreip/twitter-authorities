@@ -273,7 +273,7 @@ def compute_user_features(screen_name, col):
 
     user_tweet = db[col].find_one({'user.screen_name': screen_name})
     total_tweets = user_tweet['user']['statuses_count']
-    #from nose.tools import set_trace; set_trace()
+
     features[UF.TS] = metrics[UM.OT1] + metrics[UM.CT1] + metrics[UM.RT1]
     features[UF.TS] /= float(total_tweets)
 
@@ -293,6 +293,9 @@ def compute_user_features(screen_name, col):
     MI1 = 0 if not metrics[UM.M4] else metrics[UM.M3] * math.log(metrics[UM.M4])
     MI2 = 0 if not metrics[UM.M2] else metrics[UM.M1] * math.log(metrics[UM.M2])
     features[UF.MI] = max(MI1 - MI2, 0)
+
+    features[UF.HR] = 0 if not metrics[UM.OT1]\
+                        else metrics[UM.OT4] / float(metrics[UM.OT1])
 
     print '[' + screen_name + '] FEATURES: ' + str(features)
     return features

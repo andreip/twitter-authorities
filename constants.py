@@ -77,8 +77,14 @@ class UF:
          about the author out of courtesy because author
          said about others too.
          Estimates how much an author is genuinely mentioned.
+
+                          OT4
+    HR - Hashtag ratio = -----
+                          OT1
+         this should keep close to 1 and not diverge too much.
+         Helps in avoiding spammers using lots of hashtags.
     '''
-    TS, SS, nCS, RI, MI = range(5)
+    TS, SS, nCS, RI, MI, HR = range(6)
 
 # Minimum number of tweets a user must have in order to be
 # considered as potential authority in algorithm.
