@@ -347,9 +347,13 @@ def fetch_tweets(q, pages, col, lang='en', rpp=100):
     # Make sure db is clean.
     db[col].remove({})
     page_count = 0
-    max_id = None
+    # FIXME: hack, 6 july 2014 23:58 UTC before the match sharapova/halep
+    # Send max_id,since_id as params
+    since_id = 475064331709972480
+    max_id = 477235995276886016
     while page_count < pages:
-        tweets = api.search(q=q, lang=lang, count=rpp, max_id=max_id)['statuses']
+        tweets = api.search(q=q, lang=lang, count=rpp, max_id=max_id,
+                            since_id=since_id)['statuses']
         db[col].insert(tweets)
         page_count += 1
         # Update the max_id based on those fetched, as twitter returns
