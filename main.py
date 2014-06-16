@@ -156,7 +156,7 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
     tweets = db[col].find({'user.screen_name': screen_name}).sort('id',
                           pymongo.ASCENDING)
     retweeters, users_mentioned = [], []
-    original_texts = []
+    tweets_texts = []
     actual_retweeters = 0
 
     for tweet in author_tweets:
@@ -179,13 +179,14 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                 user_metrics[UM.RT2] += 1
             actual_retweeters += tweet['retweet_count']
 
-            original_texts.append(tweet['text'])
         elif tweet_type == TweetType.RT:
             user_metrics[UM.RT1] += 1
 
-        # For each original tweet, check if it's got any mentions of other
+        # For each tweet, check if it's got any mentions of other
         # users.
         users_mentioned += get_user_mentions(tweet, tweet_type)
+        # Keep a record of all texts and check their similarity score.
+        tweets_texts.append(tweet['text'])
 
     # Find in db all the authors that retweeted a given user.
     retweeters = get_retweeters(col, screen_name)
@@ -198,7 +199,7 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
 
     # Computing the OT3 score on the author's tweets. See repo
     # paper IdentifyingTopicalAuthoritiesInMicroblogs.pdf for details.
-    score = similarity_score(original_texts)
+    score = similarity_score(tweets_texts)
     user_metrics[UM.OT3] = score
 
 def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
