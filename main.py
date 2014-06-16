@@ -413,10 +413,15 @@ def get_usernames(col):
          for now (twitter rate limit)
     '''
     # http://docs.mongodb.org/manual/tutorial/aggregation-zip-code-data-set/
+    # Compute the average number of posts for all users.
+    avg = db[col].aggregate([
+            {'$group': {'_id': '$user.screen_name', 'total': {'$sum': 1}}},
+            {'$group': {'_id': None, 'avgNr': {'$avg': '$total'}}}
+    ])['result'][0]['avgNr']
     user_names = db[col].aggregate([
-                    {"$group": {"_id": "$user.screen_name",
-                                "total": {"$sum": 1}}},
-                    {"$match": {"total" : {"$gte": MIN_TWEETS_USER}}}
+                    {'$group': {'_id': '$user.screen_name',
+                                'total': {'$sum': 1}}},
+                    {'$match': {'total' : {'$gte': math.ceil(avg)}}}
                  ])
     user_names = map(lambda u: u['_id'], user_names['result'])
     result = []
