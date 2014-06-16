@@ -307,7 +307,21 @@ def compute_user_features(screen_name, col):
     return features
 
 
-def plot_features(mapping, col):
+def plot_features(data):
+    pl.figure(figsize=(14, 9.5))
+    pl.title('Plot Users\' Features', size=18)
+    pl.scatter(data[:, 0], data[:, 1], s=10)
+
+    x_min, x_max = data[:, 0].min() + 1, data[:, 0].max() - 1
+    y_min, y_max = data[:, 1].min() + 1, data[:, 1].max() - 1
+
+    pl.xlim(x_min, x_max)
+    pl.ylim(y_min, y_max)
+    pl.xticks(())
+    pl.yticks(())
+    pl.show()
+
+def reduce_and_store_features(mapping, col):
     # Create a matrix in np format.
     names = mapping.keys()
     data = np.vstack(map(lambda m: np.array(m.values()),
@@ -325,30 +339,25 @@ def plot_features(mapping, col):
                                        'rfsy': reduced_data[i][1]
                                       },
                                       upsert=True)
-
-    pl.figure(figsize=(14, 9.5))
-    pl.title('Plot Users\' Features', size=18)
-    pl.scatter(reduced_data[:, 0], reduced_data[:, 1], s=10)
-
-    x_min, x_max = reduced_data[:, 0].min() + 1, reduced_data[:, 0].max() - 1
-    y_min, y_max = reduced_data[:, 1].min() + 1, reduced_data[:, 1].max() - 1
-
-    pl.xlim(x_min, x_max)
-    pl.ylim(y_min, y_max)
-    pl.xticks(())
-    pl.yticks(())
-    pl.show()
+    return reduced_data
 
 
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
+    # Check if we've already got reduced features computed.
+    data = db[rfeatures_col(col)].find()
+    if data.count() > 0:
+        reduced_data = np.vstack(map(lambda x: [x['rfsx'], x['rfsy']], data))
+        return plot_features(reduced_data)
+
     # Get a list of users that we need to consider as potential authorities
     # about the given topic (from collection col).
     mapping = {}
     for name in get_usernames(col):
         features = compute_user_features(name, col)
         mapping[name] = features
-    plot_features(mapping, col)
+    reduced_data = reduce_and_store_features(mapping, col)
+    plot_features(reduced_data)
 
 
 def fetch_tweets(q, pages, col, lang='en', rpp=100):
