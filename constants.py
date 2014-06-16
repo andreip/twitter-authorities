@@ -83,8 +83,17 @@ class UF:
                           OT1
          this should keep close to 1 and not diverge too much.
          Helps in avoiding spammers using lots of hashtags.
+
+                              OT2
+    LR - Links share ratio = -----
+                              OT1
+
+    SIM - Similarity = - log (OT3)
+          This has the role of demoting the users with very high
+          similarity score (spammers) and promoting those with
+          relatively low OT3.
     '''
-    TS, SS, nCS, RI, MI, HR = range(6)
+    TS, SS, nCS, RI, MI, HR, LR, SIM = range(8)
 
 # Minimum number of tweets a user must have in order to be
 # considered as potential authority in algorithm.
