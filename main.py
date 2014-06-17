@@ -395,9 +395,14 @@ def find_authorities(q, col):
                 max_mean = mean
                 maxi = i
 
+        if hasattr(algorithm, 'labels_'):
+            labels = algorithm.labels_.astype(np.int)
+        else:
+            labels = algorithm.predict(X)
+
         # Select all members from the cluster and print them.
         best_members = []
-        for i, label in enumerate(algorithm.labels_):
+        for i, label in enumerate(labels):
             if label == maxi:
                 best_members.append((names[i], all_features[i]))
         print best_members
