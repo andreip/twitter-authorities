@@ -93,7 +93,7 @@ class UF:
           similarity score (spammers) and promoting those with
           relatively low OT3.
     '''
-    TS, SS, nCS, RI, MI, HR, LR, SIM = range(8)
+    TS, SS, nCS, RI, MI, HR, LR, SIM = 'TS', 'SS', 'nCS', 'RI', 'MI', 'HR', 'LR', 'SIM'
 
 MAX_FRIENDS = 100000
 MAX_FOLLOWERS = 100000

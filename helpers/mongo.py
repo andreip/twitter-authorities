@@ -9,3 +9,6 @@ def metrics_col(col):
 
 def rfeatures_col(col):
     return col + '_rfeatures'
+
+def features_col(col):
+    return col + '_features'

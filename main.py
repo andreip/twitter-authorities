@@ -358,10 +358,16 @@ def find_authorities(q, col):
 
     # Get a list of users that we need to consider as potential authorities
     # about the given topic (from collection col).
+    print 'Finding authorities for ', q
     mapping = {}
     for name in get_usernames(col):
         features = compute_user_features(name, col)
         mapping[name] = features
+        db[features_col(col)].update({'_id': name},
+                                     {'_id': name,
+                                      'features': features
+                                     },
+                                     upsert=True)
     reduced_data = reduce_and_store_features(mapping, col)
     plot_features(reduced_data)
 
