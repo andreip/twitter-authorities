@@ -14,6 +14,8 @@ import numpy as np
 import pylab as pl
 from sklearn import cluster
 from sklearn.decomposition import PCA
+from sklearn.metrics import euclidean_distances
+from sklearn.neighbors import kneighbors_graph
 from sklearn.preprocessing import scale
 
 from bson.objectid import ObjectId
@@ -353,13 +355,28 @@ def find_authorities(q, col):
     K = int(math.log(len(X))) + 1
     bandwidth = cluster.estimate_bandwidth(X, quantile=0.3)
 
+    # connectivity matrix for structured Ward
+    connectivity = kneighbors_graph(X, n_neighbors=K)
+    # make connectivity symmetric
+    connectivity = 0.5 * (connectivity + connectivity.T)
+
+    # Compute distances
+    #distances = np.exp(-euclidean_distances(X))
+    distances = euclidean_distances(X)
+
     k_means = cluster.KMeans(n_clusters=K)
     mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K)
     ms = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True)
+    ward_k = cluster.Ward(n_clusters=K, connectivity=connectivity)
+    spectral = cluster.SpectralClustering(n_clusters=K,
+                                          eigen_solver='arpack')#,
+                                          #affinity="nearest_neighbors")
+    dbscan = cluster.DBSCAN(eps=.2)
     affinity_propagation = cluster.AffinityPropagation(damping=.9,
                                                        preference=-200)
 
-    for algorithm in [k_means, mini_kmeans, ms, affinity_propagation]:
+    for algorithm in [k_means, mini_kmeans, ms, affinity_propagation, ward_k,
+                      spectral, dbscan]:
         # Cluster features and find the best cluster afterwards.
         print '-----'
         print 'Clustering with', str(algorithm).split('(')[0]
