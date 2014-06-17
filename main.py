@@ -12,7 +12,7 @@ matplotlib.use('TkAgg')
 
 import numpy as np
 import pylab as pl
-from sklearn.cluster import KMeans
+from sklearn import cluster
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
 
@@ -316,28 +316,32 @@ def find_authorities(q, col):
                                      upsert=True)
         data.append(features.values())
         all_features.append(features)
-
     X = np.vstack(data)
-    #X = np.vstack([[1,2],[1,3],[2,2],[0,2],[5,0],[6,0],[7,0],[-1,0],[0,0],[8,0]])
-    # Cluster features and find the best cluster afterwards.
-    print 'KMeans clustering'
-    K = int(math.log(len(X))) + 1
-    estimator = KMeans(n_clusters=K)
-    estimator.fit(X)
+    X = scale(X)
 
-    # Find the best cluster.
-    maxi, max_mean = -1, None
-    for i, feature_center in enumerate(estimator.cluster_centers_):
-        mean = np.mean(feature_center)
-        if not max_mean or max_mean < mean:
-            max_mean = mean
-            maxi = i
-    # Select all members from the cluster and print them.
-    best_members = []
-    for i, label in enumerate(estimator.labels_):
-        if label == maxi:
-            best_members.append((names[i], all_features[i]))
-    print best_members
+    K = int(math.log(len(X))) + 1
+    k_means = cluster.KMeans(n_clusters=K)
+    mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K)
+
+    for algorithm in [k_means, mini_kmeans]:
+        # Cluster features and find the best cluster afterwards.
+        print '-----'
+        print 'Clustering with', str(algorithm).split('(')[0]
+        algorithm.fit(X)
+
+        # Find the best cluster.
+        maxi, max_mean = -1, None
+        for i, feature_center in enumerate(algorithm.cluster_centers_):
+            mean = np.mean(feature_center)
+            if not max_mean or max_mean < mean:
+                max_mean = mean
+                maxi = i
+        # Select all members from the cluster and print them.
+        best_members = []
+        for i, label in enumerate(algorithm.labels_):
+            if label == maxi:
+                best_members.append((names[i], all_features[i]))
+        print best_members
 
     # Remove every reduced feature as they need to be recomputed
     # when one wants a plot of points.
