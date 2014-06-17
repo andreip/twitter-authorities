@@ -326,8 +326,11 @@ def plot_features(mapping, col):
     pl.title('Plot Users\' Features', size=18)
     pl.scatter(reduced_data[:, 0], reduced_data[:, 1], s=10)
 
-    pl.xlim(-2, 2)
-    pl.ylim(-2, 2)
+    x_min, x_max = reduced_data[:, 0].min() + 1, reduced_data[:, 0].max() - 1
+    y_min, y_max = reduced_data[:, 1].min() + 1, reduced_data[:, 1].max() - 1
+
+    pl.xlim(x_min, x_max)
+    pl.ylim(y_min, y_max)
     pl.xticks(())
     pl.yticks(())
     pl.show()
