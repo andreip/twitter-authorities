@@ -301,6 +301,37 @@ def plot_features(col):
     plot_data(reduced_data)
 
 
+def compute_centers(data, labels):
+    '''Compute the centroids of given data based
+    on the labels they've been assigned through clustering.
+
+    See test_compute_centers for a working example.
+
+    Params:
+        - data must be an array like (numpy) structure of
+          features
+        - labels must be a simple list
+    Returns:
+        - a list of centroids, each of the feature's dimention
+    '''
+    nr_labels = len(set(labels))
+    # Feature dimension.
+    n = len(data[0])
+    centers = [np.array([0 for _ in range(n)], dtype=np.float)
+               for _ in range(nr_labels)]
+    members_count = [0 for _ in range(nr_labels)]
+
+    for i, label in enumerate(labels):
+        centers[label] += data[i,:]
+        # Keep a record of how many members to 'label' there are.
+        members_count[label] += 1
+
+    for i, center in enumerate(centers):
+        if members_count[i]:
+            center /= members_count[i]
+    return centers
+
+
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
     # Get a list of users that we need to consider as potential authorities
@@ -334,13 +365,19 @@ def find_authorities(q, col):
         print 'Clustering with', str(algorithm).split('(')[0]
         algorithm.fit(X)
 
+        if hasattr(algorithm, 'cluster_centers_'):
+            cluster_centers = algorithm.cluster_centers_
+        else:
+            cluster_centers = compute_centers(X, algorithm.labels_)
+
         # Find the best cluster.
         maxi, max_mean = -1, None
-        for i, feature_center in enumerate(algorithm.cluster_centers_):
+        for i, feature_center in enumerate(cluster_centers):
             mean = np.mean(feature_center)
             if not max_mean or max_mean < mean:
                 max_mean = mean
                 maxi = i
+
         # Select all members from the cluster and print them.
         best_members = []
         for i, label in enumerate(algorithm.labels_):
