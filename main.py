@@ -313,7 +313,7 @@ def compute_user_features(screen_name, col):
     return features
 
 
-def plot_features(data):
+def plot_data(data):
     pl.figure(figsize=(14, 9.5))
     pl.title('Plot Users\' Features', size=18)
     pl.scatter(data[:, 0], data[:, 1], s=10)
@@ -327,35 +327,45 @@ def plot_features(data):
     pl.yticks(())
     pl.show()
 
-def reduce_and_store_features(mapping, col):
+
+def reduce_and_store_features(data, col):
     # Create a matrix in np format.
-    names = mapping.keys()
-    data = np.vstack(map(lambda m: np.array(m.values()),
-                     mapping.values())).astype(np.float)
+    X = np.vstack(map(lambda e: np.array(e['features'].values()),
+                      data)).astype(np.float)
     # Now all features can all be scaled appropriately.
-    data = scale(data)
-    reduced_data = PCA(n_components=2).fit_transform(data)
+    X = scale(X)
+    redX = PCA(n_components=2).fit_transform(X)
 
     # Store reduced features in db {name, points} so we can the
     # find users associated to them.
-    for i, name in enumerate(names):
+    data = data.rewind()
+    for i, feature in enumerate(data):
+        name = feature['_id']
         db[rfeatures_col(col)].update({'_id': name},
                                       {'_id': name,
-                                       'rfsx': reduced_data[i][0],
-                                       'rfsy': reduced_data[i][1]
+                                       'rfsx': redX[i][0],
+                                       'rfsy': redX[i][1]
                                       },
                                       upsert=True)
-    return reduced_data
+    return redX
+
+
+def plot_features(col):
+    '''Features should be present in collection.'''
+    # Check if we've already got reduced features computed.
+    data = db[rfeatures_col(col)].find()
+    if data.count() > 0:
+        print 'Plot from existing reduced features.'
+        reduced_data = np.vstack(map(lambda x: [x['rfsx'], x['rfsy']], data))
+    else:
+        print 'Plot from new computing features.'
+        data = db[features_col(col)].find()
+        reduced_data = reduce_and_store_features(data, col)
+    plot_data(reduced_data)
 
 
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
-    # Check if we've already got reduced features computed.
-    data = db[rfeatures_col(col)].find()
-    if data.count() > 0:
-        reduced_data = np.vstack(map(lambda x: [x['rfsx'], x['rfsy']], data))
-        return plot_features(reduced_data)
-
     # Get a list of users that we need to consider as potential authorities
     # about the given topic (from collection col).
     print 'Finding authorities for ', q
@@ -368,8 +378,9 @@ def find_authorities(q, col):
                                       'features': features
                                      },
                                      upsert=True)
-    reduced_data = reduce_and_store_features(mapping, col)
-    plot_features(reduced_data)
+    # Remove every reduced feature as they need to be recomputed
+    # when one wants a plot of points.
+    db[rfeatures_col(col)].remove()
 
 
 def fetch_tweets(q, pages, col, lang='en', rpp=100):
@@ -491,6 +502,10 @@ def main():
         assert len(sys.argv) == 3
         col = search = sys.argv[2]
         find_authorities(search, col)
+    elif sys.argv[1] == 'plot':
+        assert len(sys.argv) == 3
+        col = sys.argv[2]
+        plot_features(col)
     # See rate limit info.
     elif sys.argv[1] == 'stats':
         pp = pprint.PrettyPrinter(indent=4)
