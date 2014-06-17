@@ -27,56 +27,9 @@ auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
 api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
-# This one is to avoid a bug with tweepy once you add jsonParser to it.
-# https://github.com/tweepy/tweepy/issues/370
-api2 = tweepy.API(auth)
 
 conn = pymongo.MongoClient("mongodb://localhost")
 db = conn[DATABASE_NAME]
-
-def get_user(screen_name, cached=True, col=COLLECTION_USERS):
-    '''In case cached=True try retrieving the user from db.
-    In case it's not possible, do API call.
-    '''
-    if cached:
-        cursor = db[col].find({'screen_name': screen_name})
-        if cursor.count() > 0:
-            return cursor.next()
-
-    # Fetch and store.
-    user = api.get_user(screen_name=screen_name)
-    db[col].insert(user)
-    return user
-
-def get_tweets(screen_name, col):
-    '''Try retrieving the tweets from db if we've got all of them.
-    Otherwise just do an API call.
-    '''
-    print 'Fetching and storing tweets for user ' + screen_name +\
-          ' in collection ' + col
-
-    # See if we've got all tweets or not.
-    user = get_user(screen_name)
-    tweets = db[col].find({'user.screen_name': screen_name}).sort('id',
-        pymongo.ASCENDING)
-
-    max_id = None
-    # Case when we already have everything in db.
-    if tweets.count() == user['statuses_count']:
-        print 'Already in db, skip fetch.'
-        return tweets
-    # We already have some in DB, so we need not fetch everything.
-    # Continue from where we left off.
-    elif tweets.count():
-        # Find the minimum id, that's the point where we got rate limited.
-        max_id = tweets[0]['id']
-
-    cursor = tweepy.Cursor(api.user_timeline, screen_name=screen_name,
-                           max_id=max_id)
-    for tweet in cursor.items():
-        db[col].update({'id': tweet['id']}, tweet, upsert=True)
-    print 'Done fetching and storing!'
-    return db[col].find({'user.screen_name': screen_name})
 
 def get_tweet_type(col, tweet_id):
     cursor = db[col].find({'id': tweet_id})
@@ -230,6 +183,7 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
 
     user_metrics[UM.M3] = len(users_mentioning)
     user_metrics[UM.M4] = len(set(users_mentioning))
+
 
 def compute_user_metrics(screen_name, col):
     metrics = db[metrics_col(col)].find_one({'_id': screen_name})
