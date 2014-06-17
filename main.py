@@ -320,10 +320,15 @@ def find_authorities(q, col):
     X = scale(X)
 
     K = int(math.log(len(X))) + 1
+    bandwidth = cluster.estimate_bandwidth(X, quantile=0.3)
+
     k_means = cluster.KMeans(n_clusters=K)
     mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K)
+    ms = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True)
+    affinity_propagation = cluster.AffinityPropagation(damping=.9,
+                                                       preference=-200)
 
-    for algorithm in [k_means, mini_kmeans]:
+    for algorithm in [k_means, mini_kmeans, ms, affinity_propagation]:
         # Cluster features and find the best cluster afterwards.
         print '-----'
         print 'Clustering with', str(algorithm).split('(')[0]
