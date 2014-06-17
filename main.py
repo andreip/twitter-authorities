@@ -318,8 +318,8 @@ def plot_features(data):
     pl.title('Plot Users\' Features', size=18)
     pl.scatter(data[:, 0], data[:, 1], s=10)
 
-    x_min, x_max = data[:, 0].min() + 1, data[:, 0].max() - 1
-    y_min, y_max = data[:, 1].min() + 1, data[:, 1].max() - 1
+    x_min, x_max = data[:, 0].min() - 1, data[:, 0].max() + 1
+    y_min, y_max = data[:, 1].min() - 1, data[:, 1].max() + 1
 
     pl.xlim(x_min, x_max)
     pl.ylim(y_min, y_max)
