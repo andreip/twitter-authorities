@@ -33,14 +33,11 @@ class UM:
      * M2  - Number of unique users mentioned by the author
      * M3  - Number of mentions by others of the author
      * M4  - Number of unique users mentioning the author
-     * G1  - Number of topicaly active followers
-     * G2  - Number of topicaly active friends
     '''
     OT1, OT2, OT3, OT4 = 'OT1', 'OT2', 'OT3', 'OT4'
     CT1, CT2 = 'CT1', 'CT2'
     RT1, RT2, RT3 = 'RT1', 'RT2', 'RT3'
     M1, M2, M3, M4 = 'M1', 'M2', 'M3', 'M4'
-    G1, G2 = 'G1', 'G2'
 
 class UF:
     '''User Features computed from metrics. See

@@ -231,22 +231,6 @@ def compute_user_metrics_from_other_tweets(screen_name, col, user_metrics):
     user_metrics[UM.M3] = len(users_mentioning)
     user_metrics[UM.M4] = len(set(users_mentioning))
 
-def compute_graph_user_metrics(screen_name, col, user_metrics):
-    print 'Computing topically active followers',
-    followers = db[followers_col(col)].find_one({'name': screen_name})
-    print 'from ' + str(len(followers['ids'])) + ' followers'
-    topic_active_followers = db[col].find({'id': {'$in': followers['ids']}},
-                                          {'id': 1})
-
-    print 'Computing topically active friends',
-    friends = db[friends_col(col)].find_one({'name': screen_name})
-    print 'from ' + str(len(friends['ids'])) + ' friends'
-    topic_active_friends = db[col].find({'id': {'$in': friends['ids']}},
-                                        {'id': 1})
-
-    user_metrics[UM.G1] = topic_active_followers.count()
-    user_metrics[UM.G2] = topic_active_followers.count()
-
 def compute_user_metrics(screen_name, col):
     metrics = db[metrics_col(col)].find_one({'_id': screen_name})
     if metrics:
@@ -257,8 +241,6 @@ def compute_user_metrics(screen_name, col):
     compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
                                          user_metrics)
     compute_user_metrics_from_other_tweets(screen_name, col, user_metrics)
-    #TODO
-    #compute_graph_user_metrics(screen_name, col, user_metrics)
 
     print '[' + screen_name + '] METRICS: ' + str(user_metrics)
 
@@ -427,20 +409,7 @@ def get_usernames(col):
                     {'$match': {'total' : {'$gte': math.ceil(avg)}}}
                  ])
     user_names = map(lambda u: u['_id'], user_names['result'])
-    result = []
-
-    # Now filter those which have too many friends/followers.
-    for name in user_names:
-        user = db[col].find_one({"user.screen_name": name}, {"user":1})
-        friends_count = user['user']['friends_count']
-        followers_count = user['user']['followers_count']
-        if friends_count < MAX_FRIENDS and followers_count < MAX_FOLLOWERS:
-            result.append(name)
-        else:
-            print 'Skipping user ' + name + ' with friends,followers: ',\
-                  friends_count, followers_count
-    print 'Users for which to fetch friends/followers', result
-    return result
+    return user_names
 
 
 def exit():
