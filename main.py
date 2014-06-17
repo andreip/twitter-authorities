@@ -365,7 +365,7 @@ def find_authorities(q, col):
     distances = euclidean_distances(X)
 
     k_means = cluster.KMeans(n_clusters=K)
-    mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K)
+    mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K,n_init=11)
     ms = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True)
     ward_k = cluster.Ward(n_clusters=K, connectivity=connectivity)
     spectral = cluster.SpectralClustering(n_clusters=K,
@@ -382,10 +382,15 @@ def find_authorities(q, col):
         print 'Clustering with', str(algorithm).split('(')[0]
         algorithm.fit(X)
 
+        if hasattr(algorithm, 'labels_'):
+            labels = algorithm.labels_.astype(np.int)
+        else:
+            labels = algorithm.predict(X)
+
         if hasattr(algorithm, 'cluster_centers_'):
             cluster_centers = algorithm.cluster_centers_
         else:
-            cluster_centers = compute_centers(X, algorithm.labels_)
+            cluster_centers = compute_centers(X, labels)
 
         # Find the best cluster.
         maxi, max_mean = -1, None
@@ -394,11 +399,6 @@ def find_authorities(q, col):
             if not max_mean or max_mean < mean:
                 max_mean = mean
                 maxi = i
-
-        if hasattr(algorithm, 'labels_'):
-            labels = algorithm.labels_.astype(np.int)
-        else:
-            labels = algorithm.predict(X)
 
         # Select all members from the cluster and print them.
         best_members = []
