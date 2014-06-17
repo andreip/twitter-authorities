@@ -409,46 +409,6 @@ def fetch_tweets(q, pages, col, lang='en', rpp=100):
     print 'Done.'
 
 
-def fetch_followers_and_friends(col, user_names):
-    '''Fetch follower/friends for all distinct users present in
-    the db and store them in database.
-    Do this in a way we don't get rate limited too, once every minute
-    per query page.
-    '''
-    print 'Fetching friend/followers for ' + str(len(user_names)) + ' users'
-    for name in user_names:
-        friends_ids = []
-        followers_ids = []
-
-        friends_cursor = tweepy.Cursor(api.friends_ids, screen_name=name).pages()
-        followers_cursor = tweepy.Cursor(api.followers_ids, screen_name=name).pages()
-        have_friends, have_followers = True, True
-
-        while have_friends or have_followers:
-            print 'Fetching friends, followers for user ' + name
-            # Get both friends,followers and then sleep so to avoid
-            # rate limit.
-            if have_friends:
-                page = iterator_get_next(friends_cursor)
-                if page:
-                    friends_ids += page['ids']
-                if not page or len(page['ids']) < 5000:
-                    have_friends = False
-            if have_followers:
-                page = iterator_get_next(followers_cursor)
-                if page:
-                    followers_ids += page['ids']
-                if not page or len(page['ids']) < 5000:
-                    have_followers = False
-            time.sleep(60)
-        db[friends_col(col)].update({'_id': name},
-                                   {'_id': name, 'ids': friends_ids},
-                                   upsert=True)
-        db[followers_col(col)].update({'_id': name},
-                                     {'_id': name, 'ids': followers_ids},
-                                     upsert=True)
-
-
 def get_usernames(col):
     '''Returns a list of users (strings) from collection that:
        - wrote at least a number X of tweets about the topic (we assume that
@@ -485,7 +445,7 @@ def get_usernames(col):
 
 def exit():
     print 'Call like: ' + sys.argv[0] +\
-          ' [fetch search pages][stats][compute search]'
+          ' [fetch search pages][stats][compute search][plot collection]'
     sys.exit(1)
 
 
@@ -500,9 +460,6 @@ def main():
         # Save tweets for a given query in the collection with same name
         # for simplicity and consistency.
         fetch_tweets(search, pages, col)
-
-        user_names = get_usernames(col)
-        fetch_followers_and_friends(col, user_names)
     # Compute authorities by inspecting db.
     elif sys.argv[1] == 'compute':
         assert len(sys.argv) == 3
