@@ -95,10 +95,6 @@ class UF:
     '''
     TS, SS, nCS, RI, MI, HR, LR, SIM = range(8)
 
-# Minimum number of tweets a user must have in order to be
-# considered as potential authority in algorithm.
-MIN_TWEETS_USER = 10
-
 MAX_FRIENDS = 100000
 MAX_FOLLOWERS = 100000
 

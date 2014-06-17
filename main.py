@@ -428,11 +428,9 @@ def fetch_followers_and_friends(col, user_names):
 
 def get_usernames(col):
     '''Returns a list of users (strings) from collection that:
-       - wrote at least MIN_TWEETS_USER about the topic (we assume that
+       - wrote at least a number X of tweets about the topic (we assume that
          the collection holds data about only one given topic)
-       - does not have more than MAX_FRIENDS and MAX_FOLLOWERS, as
-         we need to get that list for some feathres and it's too time expensive
-         for now (twitter rate limit)
+       - the X is just above the mean of posts of all users about the topic
     '''
     # http://docs.mongodb.org/manual/tutorial/aggregation-zip-code-data-set/
     # Compute the average number of posts for all users.
@@ -480,8 +478,6 @@ def main():
         # for simplicity and consistency.
         fetch_tweets(search, pages, col)
 
-        # Find the users that have at least MIN_TWEETS_USER tweets in our db.
-        # Also discard those with too many followers/friends.
         user_names = get_usernames(col)
         fetch_followers_and_friends(col, user_names)
     # Compute authorities by inspecting db.
