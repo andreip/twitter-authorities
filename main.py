@@ -367,52 +367,53 @@ def find_authorities(q, col):
     #distances = np.exp(-euclidean_distances(X))
     distances = metrics.euclidean_distances(X)
 
-    k_means = cluster.KMeans(n_clusters=K)
-    k_means1= cluster.KMeans(n_clusters=K/2)
-    k_means2= cluster.KMeans(n_clusters=K*2)
-    k_means3= cluster.KMeans(n_clusters=K*5)
-    mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K,n_init=11)
-    mini_kmeans2 = cluster.MiniBatchKMeans(n_clusters=K*2,n_init=11)
-    mini_kmeans3 = cluster.MiniBatchKMeans(n_clusters=K*3,n_init=11)
-    mini_kmeans4 = cluster.MiniBatchKMeans(n_clusters=K*4,n_init=11)
+    k_means = cluster.KMeans(n_clusters=K/3)
+    k_means1= cluster.KMeans(n_clusters=K/4)
+    k_means2= cluster.KMeans(n_clusters=K/5)
+    k_means3= cluster.KMeans(n_clusters=K/6)
+    mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K/2,n_init=11)
+    mini_kmeans2 = cluster.MiniBatchKMeans(n_clusters=K/3,n_init=11)
+    mini_kmeans3 = cluster.MiniBatchKMeans(n_clusters=K/4,n_init=11)
+    mini_kmeans4 = cluster.MiniBatchKMeans(n_clusters=K/6,n_init=11)
     ms = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True)
     ms1 = cluster.MeanShift(bandwidth=bandwidth1, bin_seeding=True)
     ms2 = cluster.MeanShift(bandwidth=bandwidth2, bin_seeding=True)
     ms3 = cluster.MeanShift(bandwidth=bandwidth3, bin_seeding=True)
-    ward_k = cluster.Ward(n_clusters=K, connectivity=connectivity)
-    ward_k1 = cluster.Ward(n_clusters=K*2, connectivity=connectivity)
-    ward_k2= cluster.Ward(n_clusters=K*3, connectivity=connectivity)
-    ward_k3= cluster.Ward(n_clusters=K*4, connectivity=connectivity)
-    spectral = cluster.SpectralClustering(n_clusters=K,
+    ward_k = cluster.Ward(n_clusters=K)#, connectivity=connectivity)
+    ward_k1 = cluster.Ward(n_clusters=K/2)#, connectivity=connectivity)
+    ward_k2= cluster.Ward(n_clusters=K/4)#, connectivity=connectivity)
+    ward_k3= cluster.Ward(n_clusters=K/6)#, connectivity=connectivity)
+    spectral = cluster.SpectralClustering(n_clusters=K**2,
                                           eigen_solver='arpack')#,
-    spectral1= cluster.SpectralClustering(n_clusters=2*K,
+    spectral1= cluster.SpectralClustering(n_clusters=int(math.sqrt(len(X))),
                                           eigen_solver='arpack')#,
-    spectral2= cluster.SpectralClustering(n_clusters=3*K,
-                                          eigen_solver='arpack')#,
-    spectral3= cluster.SpectralClustering(n_clusters=4*K,
-                                          eigen_solver='arpack')#,
-                                          #affinity="nearest_neighbors")
-    dbscan = cluster.DBSCAN(eps=.2)
-    dbscan2 = cluster.DBSCAN(eps=.1)
-    dbscan3 = cluster.DBSCAN(eps=.5)
-    dbscan4 = cluster.DBSCAN(eps=.7)
-    affinity_propagation = cluster.AffinityPropagation(damping=.9,
+    dbscan = cluster.DBSCAN(eps=1)
+    dbscan2 = cluster.DBSCAN(eps=2)
+    dbscan3 = cluster.DBSCAN(eps=4)
+    dbscan4 = cluster.DBSCAN(eps=8)
+    affinity_propagation = cluster.AffinityPropagation(damping=.5,
                                                        preference=-200)
-    affinity_propagation1= cluster.AffinityPropagation(damping=.9,
+    affinity_propagation1= cluster.AffinityPropagation(damping=.65,
                                                        preference=-200)
-    affinity_propagation2= cluster.AffinityPropagation(damping=.9,
+    affinity_propagation2= cluster.AffinityPropagation(damping=.8,
                                                        preference=-200)
-    affinity_propagation3= cluster.AffinityPropagation(damping=.9,
+    affinity_propagation3= cluster.AffinityPropagation(damping=.95,
                                                        preference=-200)
+    xaffinity_propagation = cluster.AffinityPropagation(damping=.5)
+    xaffinity_propagation1= cluster.AffinityPropagation(damping=.65)
+    xaffinity_propagation2= cluster.AffinityPropagation(damping=.8)
+    xaffinity_propagation3= cluster.AffinityPropagation(damping=.95)
 
     algs = [k_means, k_means1, k_means2, k_means3,
             mini_kmeans, mini_kmeans2, mini_kmeans3, mini_kmeans4,
             ms, ms1, ms2, ms3,
             ward_k, ward_k1, ward_k2, ward_k3,
-            spectral, spectral1, spectral2, spectral3,
+            spectral, spectral1,
             dbscan, dbscan2, dbscan3, dbscan4,
             affinity_propagation, affinity_propagation1,
-            affinity_propagation2, affinity_propagation3]
+            affinity_propagation2, affinity_propagation3,
+            xaffinity_propagation, xaffinity_propagation1,
+            xaffinity_propagation2, xaffinity_propagation3]
 
     scores = []
 
