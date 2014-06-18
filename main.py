@@ -14,7 +14,7 @@ import numpy as np
 import pylab as pl
 from sklearn import cluster
 from sklearn.decomposition import PCA
-from sklearn.metrics import euclidean_distances
+from sklearn import metrics
 from sklearn.neighbors import kneighbors_graph
 from sklearn.preprocessing import scale
 
@@ -353,7 +353,10 @@ def find_authorities(q, col):
     X = scale(X)
 
     K = int(math.log(len(X))) + 1
-    bandwidth = cluster.estimate_bandwidth(X, quantile=0.3)
+    bandwidth = cluster.estimate_bandwidth(X, quantile=0.1)
+    bandwidth1 = cluster.estimate_bandwidth(X, quantile=0.3)
+    bandwidth2 = cluster.estimate_bandwidth(X, quantile=0.6)
+    bandwidth3 = cluster.estimate_bandwidth(X, quantile=0.9)
 
     # connectivity matrix for structured Ward
     connectivity = kneighbors_graph(X, n_neighbors=K)
@@ -362,21 +365,58 @@ def find_authorities(q, col):
 
     # Compute distances
     #distances = np.exp(-euclidean_distances(X))
-    distances = euclidean_distances(X)
+    distances = metrics.euclidean_distances(X)
 
     k_means = cluster.KMeans(n_clusters=K)
+    k_means1= cluster.KMeans(n_clusters=K/2)
+    k_means2= cluster.KMeans(n_clusters=K*2)
+    k_means3= cluster.KMeans(n_clusters=K*5)
     mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K,n_init=11)
+    mini_kmeans2 = cluster.MiniBatchKMeans(n_clusters=K*2,n_init=11)
+    mini_kmeans3 = cluster.MiniBatchKMeans(n_clusters=K*3,n_init=11)
+    mini_kmeans4 = cluster.MiniBatchKMeans(n_clusters=K*4,n_init=11)
     ms = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True)
+    ms1 = cluster.MeanShift(bandwidth=bandwidth1, bin_seeding=True)
+    ms2 = cluster.MeanShift(bandwidth=bandwidth2, bin_seeding=True)
+    ms3 = cluster.MeanShift(bandwidth=bandwidth3, bin_seeding=True)
     ward_k = cluster.Ward(n_clusters=K, connectivity=connectivity)
+    ward_k1 = cluster.Ward(n_clusters=K*2, connectivity=connectivity)
+    ward_k2= cluster.Ward(n_clusters=K*3, connectivity=connectivity)
+    ward_k3= cluster.Ward(n_clusters=K*4, connectivity=connectivity)
     spectral = cluster.SpectralClustering(n_clusters=K,
+                                          eigen_solver='arpack')#,
+    spectral1= cluster.SpectralClustering(n_clusters=2*K,
+                                          eigen_solver='arpack')#,
+    spectral2= cluster.SpectralClustering(n_clusters=3*K,
+                                          eigen_solver='arpack')#,
+    spectral3= cluster.SpectralClustering(n_clusters=4*K,
                                           eigen_solver='arpack')#,
                                           #affinity="nearest_neighbors")
     dbscan = cluster.DBSCAN(eps=.2)
+    dbscan2 = cluster.DBSCAN(eps=.1)
+    dbscan3 = cluster.DBSCAN(eps=.5)
+    dbscan4 = cluster.DBSCAN(eps=.7)
     affinity_propagation = cluster.AffinityPropagation(damping=.9,
                                                        preference=-200)
+    affinity_propagation1= cluster.AffinityPropagation(damping=.9,
+                                                       preference=-200)
+    affinity_propagation2= cluster.AffinityPropagation(damping=.9,
+                                                       preference=-200)
+    affinity_propagation3= cluster.AffinityPropagation(damping=.9,
+                                                       preference=-200)
 
-    for algorithm in [k_means, mini_kmeans, ms, affinity_propagation, ward_k,
-                      spectral, dbscan]:
+    algs = [k_means, k_means1, k_means2, k_means3,
+            mini_kmeans, mini_kmeans2, mini_kmeans3, mini_kmeans4,
+            ms, ms1, ms2, ms3,
+            ward_k, ward_k1, ward_k2, ward_k3,
+            spectral, spectral1, spectral2, spectral3,
+            dbscan, dbscan2, dbscan3, dbscan4,
+            affinity_propagation, affinity_propagation1,
+            affinity_propagation2, affinity_propagation3]
+
+    scores = []
+
+    for algorithm in algs:
         # Cluster features and find the best cluster afterwards.
         print '-----'
         print 'Clustering with', str(algorithm).split('(')[0]
@@ -392,6 +432,9 @@ def find_authorities(q, col):
         else:
             cluster_centers = compute_centers(X, labels)
 
+        scores.append(metrics.silhouette_score(X, labels))
+        print 'silhouette SCORE', scores[-1]
+
         # Find the best cluster.
         maxi, max_mean = -1, None
         for i, feature_center in enumerate(cluster_centers):
@@ -406,6 +449,9 @@ def find_authorities(q, col):
             if label == maxi:
                 best_members.append((names[i], all_features[i]))
         print best_members
+
+    for i, alg in enumerate(algs):
+        print str(alg).split('(')[0], scores[i]
 
     # Remove every reduced feature as they need to be recomputed
     # when one wants a plot of points.
