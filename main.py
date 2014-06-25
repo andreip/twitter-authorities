@@ -374,7 +374,8 @@ def find_authorities(q, col):
         members.append((names[i], features))
 
     print 'keys',keys
-    for x in get_top_members(members, 10):
+    nr_top = int(math.ceil(2 * math.log(len(members))))
+    for x in get_top_members(members, nr_top):
         print x
 
     # Remove every reduced feature as they need to be recomputed
