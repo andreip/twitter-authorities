@@ -12,7 +12,7 @@ matplotlib.use('TkAgg')
 
 import numpy as np
 import pylab as pl
-from sklearn import cluster
+from sklearn import cluster, mixture
 from sklearn.decomposition import PCA
 from sklearn import metrics
 from sklearn.neighbors import kneighbors_graph
@@ -356,10 +356,7 @@ def find_authorities(q, col):
     X = scale(X)
 
     K = int(math.log(len(X))) + 1
-    bandwidth = cluster.estimate_bandwidth(X, quantile=0.1)
-    bandwidth1 = cluster.estimate_bandwidth(X, quantile=0.3)
-    bandwidth2 = cluster.estimate_bandwidth(X, quantile=0.6)
-    bandwidth3 = cluster.estimate_bandwidth(X, quantile=0.9)
+    bandwidth = cluster.estimate_bandwidth(X, quantile=0.3)
 
     # connectivity matrix for structured Ward
     connectivity = kneighbors_graph(X, n_neighbors=K)
@@ -370,25 +367,18 @@ def find_authorities(q, col):
     #distances = np.exp(-euclidean_distances(X))
     distances = metrics.euclidean_distances(X)
 
+    gmm = mixture.GMM(n_components=K)
+    gmm2= mixture.GMM(n_components=K/2)
+    gmm3= mixture.GMM(n_components=K/3)
+
     k_means = cluster.KMeans(n_clusters=K/3)
-    k_means1= cluster.KMeans(n_clusters=K/4)
-    k_means2= cluster.KMeans(n_clusters=K/5)
-    k_means3= cluster.KMeans(n_clusters=K/6)
     mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K/2,n_init=11)
     mini_kmeans2 = cluster.MiniBatchKMeans(n_clusters=K/3,n_init=11)
-    mini_kmeans3 = cluster.MiniBatchKMeans(n_clusters=K/4,n_init=11)
-    mini_kmeans4 = cluster.MiniBatchKMeans(n_clusters=K/6,n_init=11)
     ms = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True)
-    ms1 = cluster.MeanShift(bandwidth=bandwidth1, bin_seeding=True)
-    ms2 = cluster.MeanShift(bandwidth=bandwidth2, bin_seeding=True)
-    ms3 = cluster.MeanShift(bandwidth=bandwidth3, bin_seeding=True)
     ward_k = cluster.Ward(n_clusters=K)#, connectivity=connectivity)
     ward_k1 = cluster.Ward(n_clusters=K/2)#, connectivity=connectivity)
     ward_k2= cluster.Ward(n_clusters=K/4)#, connectivity=connectivity)
-    ward_k3= cluster.Ward(n_clusters=K/6)#, connectivity=connectivity)
     spectral = cluster.SpectralClustering(n_clusters=K**2,
-                                          eigen_solver='arpack')#,
-    spectral1= cluster.SpectralClustering(n_clusters=int(math.sqrt(len(X))),
                                           eigen_solver='arpack')#,
     dbscan = cluster.DBSCAN(eps=1)
     dbscan2 = cluster.DBSCAN(eps=2)
@@ -407,11 +397,11 @@ def find_authorities(q, col):
     xaffinity_propagation2= cluster.AffinityPropagation(damping=.8)
     xaffinity_propagation3= cluster.AffinityPropagation(damping=.95)
 
-    algs = [k_means, k_means1, k_means2, k_means3,
-            mini_kmeans, mini_kmeans2, mini_kmeans3, mini_kmeans4,
-            ms, ms1, ms2, ms3,
-            ward_k, ward_k1, ward_k2, ward_k3,
-            spectral, spectral1,
+    algs = [k_means, gmm, gmm2, gmm3,
+            mini_kmeans, mini_kmeans2,
+            ms,
+            ward_k, ward_k1, ward_k2,
+            spectral,
             dbscan, dbscan2, dbscan3, dbscan4,
             affinity_propagation, affinity_propagation1,
             affinity_propagation2, affinity_propagation3,
@@ -436,8 +426,12 @@ def find_authorities(q, col):
         else:
             cluster_centers = compute_centers(X, labels)
 
-        scores.append(metrics.silhouette_score(X, labels))
-        print 'silhouette SCORE', scores[-1]
+        try:
+            scores.append(metrics.silhouette_score(X, labels))
+            print 'silhouette SCORE', scores[-1]
+        except Exception as e:
+            print 'Exception',e
+            scores.append(-10)
 
         # Find the best cluster.
         maxi, max_mean = -1, None
