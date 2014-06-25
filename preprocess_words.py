@@ -4,16 +4,21 @@ import string
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
 
-MIN_WORD_LEN = 3
-
 stemmer = SnowballStemmer("english")
 stopwords = open(r'stopwords.txt', 'r').read().splitlines()
 
 def process_text(text):
     '''Returns a list of words that go through: punctuation removal,
-    tokenization, lowercase, stemming and removal of URLs.'''
+    tokenization, lowercase, stemming.
+
+    First remove URLs so we can apply the above easily, then add them
+    back untouched.
+    '''
+    from constants import URL_REGEX
+    # Save all URLs.
+    urls = re.findall(URL_REGEX, text)
     # Remove all URLs.
-    text = re.sub(r'https?:\/\/[^\s\r\n\t]+', '', text)
+    text = re.sub(URL_REGEX, '', text)
 
     # Replace punctuation with space so they can be easily tokenized.
     for c in string.punctuation:
@@ -28,8 +33,8 @@ def process_text(text):
     # Stem all words from body.
     words = map(stemmer.stem, words)
     # Remove duplicates.
-    words = list(set(words))
-    return words
+    words, urls = list(set(words)), list(set(urls))
+    return words + urls
 
 def keep_only_letters(word):
     '''Given a string like "ana1.bbc", return "anabbc".'''
@@ -40,4 +45,5 @@ def not_stopword(word):
     return word not in stopwords
 
 def not_too_short(word):
+    from constants import MIN_WORD_LEN
     return len(word) >= MIN_WORD_LEN

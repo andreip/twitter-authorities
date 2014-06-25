@@ -97,6 +97,11 @@ MAX_FOLLOWERS = 100000
 
 nCS_LAMBDA = 0.05
 
+# Preprocess words specifics
+
+MIN_WORD_LEN = 3
+URL_REGEX = 'https?:\/\/[^\s\r\n\t]+'
+
 # MongoDB specifics.
 
 SAMPLE_COLLECTION = 'tweets_en'
