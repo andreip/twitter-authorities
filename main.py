@@ -247,8 +247,7 @@ def compute_user_features(screen_name, col):
     features[UF.LR] = 0 if not metrics[UM.OT1]\
                         else metrics[UM.OT4] / float(metrics[UM.OT1])
 
-    features[UF.SIM] = 5 if not metrics[UM.OT3]\
-                         else -math.log(metrics[UM.OT3])
+    features[UF.nSIM] = 1 - metrics[UM.OT3]
 
     print '[' + screen_name + '] FEATURES: ' + str(features)
 

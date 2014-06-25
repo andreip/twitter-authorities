@@ -85,12 +85,12 @@ class UF:
     LR - Links share ratio = -----
                               OT1
 
-    SIM - Similarity = - log (OT3)
-          This has the role of demoting the users with very high
-          similarity score (spammers) and promoting those with
-          relatively low OT3.
+    nSIM - Non-Similarity = 1 - OT3
+           This has the role of demoting the users with very high
+           similarity score (spammers) and promoting those with
+           relatively low OT3.
     '''
-    TS, SS, nCS, RI, MI, HR, LR, SIM = 'TS', 'SS', 'nCS', 'RI', 'MI', 'HR', 'LR', 'SIM'
+    TS, SS, nCS, RI, MI, HR, LR, nSIM = 'TS', 'SS', 'nCS', 'RI', 'MI', 'HR', 'LR', 'nSIM'
 
 MAX_FRIENDS = 100000
 MAX_FOLLOWERS = 100000
