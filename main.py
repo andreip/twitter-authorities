@@ -249,6 +249,11 @@ def compute_user_features(screen_name, col):
                          else -math.log(metrics[UM.OT3])
 
     print '[' + screen_name + '] FEATURES: ' + str(features)
+
+    db[features_col(col)].update({'_id': screen_name},
+                                 {'_id': screen_name,
+                                  'features': features},
+                                 upsert=True)
     return features
 
 
@@ -333,123 +338,44 @@ def compute_centers(data, labels):
             center /= members_count[i]
     return centers
 
+
 def get_top_members(members, n_top):
-    return sorted(members, key=lambda x: np.mean(x[1].values()), reverse=True)[:n_top]
+    return sorted(members, key=lambda x: np.mean(x[1]), reverse=True)[:n_top]
 
 
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
     # Get a list of users that we need to consider as potential authorities
     # about the given topic (from collection col).
-    print 'Finding authorities for ', q
-    names, data, all_features = get_usernames(col), [], []
-    for name in names:
-        features = compute_user_features(name, col)
-        db[features_col(col)].update({'_id': name},
-                                     {'_id': name,
-                                      'features': features
-                                     },
-                                     upsert=True)
-        data.append(features.values())
-        all_features.append(features)
+    print 'Finding authorities for', q
+    names, data, keys = get_usernames(col), [], None
+    users = db[features_col(col)].find({'_id': {'$in': names}})
+    if users.count() != len(names):
+        print 'Calculating features...'
+        for name in names:
+            features = compute_user_features(name, col)
+            data.append(features.values())
+            if not keys:
+                keys = features.keys()
+    else:
+        print 'Using existent features...'
+        names = []
+        for user in users:
+            names.append(user['_id'])
+            data.append(user['features'].values())
+            if not keys:
+                keys = user['features'].keys()
+    # Scale feature values, as they might be skewed.
     X = np.vstack(data)
     X = scale(X)
 
-    K = int(math.log(len(X))) + 1
-    bandwidth = cluster.estimate_bandwidth(X, quantile=0.3)
+    members = []
+    for i, features in enumerate(X):
+        members.append((names[i], features))
 
-    # connectivity matrix for structured Ward
-    connectivity = kneighbors_graph(X, n_neighbors=K)
-    # make connectivity symmetric
-    connectivity = 0.5 * (connectivity + connectivity.T)
-
-    # Compute distances
-    #distances = np.exp(-euclidean_distances(X))
-    distances = metrics.euclidean_distances(X)
-
-    gmm = mixture.GMM(n_components=K)
-    gmm2= mixture.GMM(n_components=K/2)
-    gmm3= mixture.GMM(n_components=K/3)
-
-    k_means = cluster.KMeans(n_clusters=K/3)
-    mini_kmeans = cluster.MiniBatchKMeans(n_clusters=K/2,n_init=11)
-    mini_kmeans2 = cluster.MiniBatchKMeans(n_clusters=K/3,n_init=11)
-    ms = cluster.MeanShift(bandwidth=bandwidth, bin_seeding=True)
-    ward_k = cluster.Ward(n_clusters=K)#, connectivity=connectivity)
-    ward_k1 = cluster.Ward(n_clusters=K/2)#, connectivity=connectivity)
-    ward_k2= cluster.Ward(n_clusters=K/4)#, connectivity=connectivity)
-    spectral = cluster.SpectralClustering(n_clusters=K**2,
-                                          eigen_solver='arpack')#,
-    dbscan = cluster.DBSCAN(eps=1)
-    dbscan2 = cluster.DBSCAN(eps=2)
-    dbscan3 = cluster.DBSCAN(eps=4)
-    dbscan4 = cluster.DBSCAN(eps=8)
-    affinity_propagation = cluster.AffinityPropagation(damping=.5,
-                                                       preference=-200)
-    affinity_propagation1= cluster.AffinityPropagation(damping=.65,
-                                                       preference=-200)
-    affinity_propagation2= cluster.AffinityPropagation(damping=.8,
-                                                       preference=-200)
-    affinity_propagation3= cluster.AffinityPropagation(damping=.95,
-                                                       preference=-200)
-    xaffinity_propagation = cluster.AffinityPropagation(damping=.5)
-    xaffinity_propagation1= cluster.AffinityPropagation(damping=.65)
-    xaffinity_propagation2= cluster.AffinityPropagation(damping=.8)
-    xaffinity_propagation3= cluster.AffinityPropagation(damping=.95)
-
-    algs = [k_means, gmm, gmm2, gmm3,
-            mini_kmeans, mini_kmeans2,
-            ms,
-            ward_k, ward_k1, ward_k2,
-            spectral,
-            dbscan, dbscan2, dbscan3, dbscan4,
-            affinity_propagation, affinity_propagation1,
-            affinity_propagation2, affinity_propagation3,
-            xaffinity_propagation, xaffinity_propagation1,
-            xaffinity_propagation2, xaffinity_propagation3]
-
-    scores = []
-
-    for algorithm in algs:
-        # Cluster features and find the best cluster afterwards.
-        print '-----'
-        print 'Clustering with', str(algorithm).split('(')[0]
-        algorithm.fit(X)
-
-        if hasattr(algorithm, 'labels_'):
-            labels = algorithm.labels_.astype(np.int)
-        else:
-            labels = algorithm.predict(X)
-
-        if hasattr(algorithm, 'cluster_centers_'):
-            cluster_centers = algorithm.cluster_centers_
-        else:
-            cluster_centers = compute_centers(X, labels)
-
-        try:
-            scores.append(metrics.silhouette_score(X, labels))
-            print 'silhouette SCORE', scores[-1]
-        except Exception as e:
-            print 'Exception',e
-            scores.append(-10)
-
-        # Find the best cluster.
-        maxi, max_mean = -1, None
-        for i, feature_center in enumerate(cluster_centers):
-            mean = np.mean(feature_center)
-            if not max_mean or max_mean < mean:
-                max_mean = mean
-                maxi = i
-
-        # Select all members from the cluster and print them.
-        best_members = []
-        for i, label in enumerate(labels):
-            if label == maxi:
-                best_members.append((names[i], all_features[i]))
-        print get_top_members(best_members, 10)
-
-    for i, alg in enumerate(algs):
-        print str(alg).split('(')[0], scores[i]
+    print 'keys',keys
+    for x in get_top_members(members, 10):
+        print x
 
     # Remove every reduced feature as they need to be recomputed
     # when one wants a plot of points.
