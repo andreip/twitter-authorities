@@ -133,11 +133,6 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
             # Count how many hashtags one has used in all the tweets.
             for hashtag in tweet['entities']['hashtags']:
                 user_metrics[UM.OT4] += 1
-
-            # Mark the fact that this tweet has been retweeted at least once.
-            if tweet['retweet_count'] > 0:
-                user_metrics[UM.RT2] += 1
-
         elif tweet_type == TweetType.RT:
             user_metrics[UM.RT1] += 1
 
@@ -146,8 +141,15 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
         users_mentioned += get_user_mentions(tweet, tweet_type)
         # Keep a record of all texts and check their similarity score.
         tweets_texts.append(tweet['text'])
+
         # Count how many users have retweeted one's tweets.
-        actual_retweeters += tweet['retweet_count']
+        # If it's a retweet, then the retweet_count represents
+        # how many time the original tweet has been retweeted, no good!
+        if tweet_type != TweetType.RT:
+            actual_retweeters += tweet['retweet_count']
+            # Mark the fact that this tweet has been retweeted at least once.
+            if tweet['retweet_count'] > 0:
+                user_metrics[UM.RT2] += 1
 
     # Find in db all the authors that retweeted a given user.
     retweeters = get_retweeters(col, screen_name)
