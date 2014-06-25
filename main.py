@@ -136,6 +136,18 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
         elif tweet_type == TweetType.RT:
             user_metrics[UM.RT1] += 1
 
+        # Search all urls of a user how many times they've been posted
+        # before this tweet.
+        for url in re.findall(URL_REGEX, tweet['text']):
+            urls_before = db[col].find({'text': {'$regex': '.*' + url + '.*'},
+                                         'id': {'$lt': tweet['id']}}).count()
+            # In case this user is the first to post this URL, give him
+            # credit for that.
+            if urls_before == 0:
+                user_metrics[UM.U] += 1
+            else:
+                user_metrics[UM.U] -= 1
+
         # For each tweet, check if it's got any mentions of other
         # users.
         users_mentioned += get_user_mentions(tweet, tweet_type)
@@ -248,6 +260,8 @@ def compute_user_features(screen_name, col):
                         else metrics[UM.OT4] / float(metrics[UM.OT1])
 
     features[UF.nSIM] = 1 - metrics[UM.OT3]
+
+    features[UF.URL] = metrics[UM.U]
 
     print '[' + screen_name + '] FEATURES: ' + str(features)
 

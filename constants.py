@@ -33,11 +33,13 @@ class UM:
      * M2  - Number of unique users mentioned by the author
      * M3  - Number of mentions by others of the author
      * M4  - Number of unique users mentioning the author
+     * U   - Number of unique URLs the user posted before any other
     '''
     OT1, OT2, OT3, OT4 = 'OT1', 'OT2', 'OT3', 'OT4'
     CT1, CT2 = 'CT1', 'CT2'
     RT1, RT2, RT3 = 'RT1', 'RT2', 'RT3'
     M1, M2, M3, M4 = 'M1', 'M2', 'M3', 'M4'
+    U = 'U'
 
 class UF:
     '''User Features computed from metrics. See
@@ -89,8 +91,14 @@ class UF:
            This has the role of demoting the users with very high
            similarity score (spammers) and promoting those with
            relatively low OT3.
+
+    URL - Number of URLs posted before any other authors = U
+          Uses the metric U directly ; the bigger this score,
+          the better, meaning that many URLs have been posted
+          by user before any others.
     '''
     TS, SS, nCS, RI, MI, HR, LR, nSIM = 'TS', 'SS', 'nCS', 'RI', 'MI', 'HR', 'LR', 'nSIM'
+    URL = 'URL'
 
 MAX_FRIENDS = 100000
 MAX_FOLLOWERS = 100000
