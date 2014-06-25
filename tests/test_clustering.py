@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from main import compute_centers
+from main import compute_centers, get_top_members
 
 class TestClustering(unittest.TestCase):
 
@@ -25,3 +25,9 @@ class TestClustering(unittest.TestCase):
         actual_centers2 = [ data[1,:], (data[0,:] + data[2,:]) / 2 ]
         for i, a in enumerate(actual_centers2):
             self.assertEqual(a.tolist(), centers2[i].tolist())
+
+    def test_get_top_members(self):
+        data = [('A', {'1': 10, '2': 20}), ('B', {'1':5, '2': 100}),
+                ('C', {'1': -1, '2': 1000})]
+        actual = [data[2], data[1]]
+        self.assertEqual(actual, get_top_members(data, len(actual)))

@@ -333,6 +333,9 @@ def compute_centers(data, labels):
             center /= members_count[i]
     return centers
 
+def get_top_members(members, n_top):
+    return sorted(members, key=lambda x: np.mean(x[1].values()), reverse=True)[:n_top]
+
 
 def find_authorities(q, col):
     '''Finds authorities for a given search.'''
@@ -449,7 +452,7 @@ def find_authorities(q, col):
         for i, label in enumerate(labels):
             if label == maxi:
                 best_members.append((names[i], all_features[i]))
-        print best_members
+        print get_top_members(best_members, 10)
 
     for i, alg in enumerate(algs):
         print str(alg).split('(')[0], scores[i]
