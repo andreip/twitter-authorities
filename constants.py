@@ -64,7 +64,9 @@ class UF:
           nCS < -----------
                  OT1 + CT2
 
-         #TODO
+         estimates the degree of conversations that the
+         author started ; being higher means he's initiated
+         less conversations than others
 
     RI - Retweet Impact = RT2 log(RT3)
          so penalize greatly when RT3 is small (a small
