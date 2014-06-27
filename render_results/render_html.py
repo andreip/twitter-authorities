@@ -46,10 +46,13 @@ def render_html(keys, top, query):
     res['features_doc'] = UF.__doc__
     res['query'] = query
     print res['features']
-    render_authorities_page(res)
+    render_authorities_page(res, query)
 
-def render_authorities_page(context_dict):
+def render_authorities_page(context_dict, query):
     t = loader.get_template('template.html')
-    print context_dict
     c = Context(context_dict)
-    print t.render(c)
+    html_output = t.render(c)
+    filename = query + '.html'
+    with open(filename, 'w') as f:
+        f.write(html_output)
+    print 'Created HTML output file', filename

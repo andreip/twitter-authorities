@@ -17,15 +17,17 @@
                 <th>Unique first URLs</th>
                 <th>Retweet Impact</th>
             </tr>
-        </table>
-            {% for user, feat in features %}
-                <tr>
-                    <td>{{forloop.counter}}</td>
-                    <td>{{ user }}</td>
-                    <td>{{ feat }}</td>
-                    {% for k,v in feat.items %}
-                        <td>{{ v }}</td>
-                    {% endfor %}
+            {% for user in features %}
+                {% for name, feat in user.items %}
+                    <tr>
+                        <td>{{forloop.counter}}</td>
+                        <td>{{ name }}</td>
+                        {% for k, v in feat.items %}
+                            <td>{{ v }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
             {% endfor %}
+        </table>
     </body>
 </html>
