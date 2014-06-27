@@ -1,0 +1,31 @@
+<html>
+    <head>
+        <title>Authorities for {{ query }}</title>
+    </head>
+    <body>
+        <table>
+            <tr>
+                <th>Rank</th>
+                <th>Twitter name</th>
+                <th>Signal Strength</th>
+                <th>Non-Chat Signal</th>
+                <th>Mention Impact</th>
+                <th>Topical Signal</th>
+                <th>Non-Similarity</th>
+                <th>Hashtag ratio</th>
+                <th>Links ratio</th>
+                <th>Unique first URLs</th>
+                <th>Retweet Impact</th>
+            </tr>
+        </table>
+            {% for user, feat in features %}
+                <tr>
+                    <td>{{forloop.counter}}</td>
+                    <td>{{ user }}</td>
+                    <td>{{ feat }}</td>
+                    {% for k,v in feat.items %}
+                        <td>{{ v }}</td>
+                    {% endfor %}
+            {% endfor %}
+    </body>
+</html>

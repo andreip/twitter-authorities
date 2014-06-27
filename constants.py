@@ -43,7 +43,7 @@ class UM:
 
 class UF:
     '''User Features computed from metrics. See
-    IdentifyingTopicalAuthoritiesInMicroblogs.pdf paper for details.
+    the paper for details. (paper/ dir)
 
                           OT1 + CT1 + RT1
     TS - Topical Signal = ---------------

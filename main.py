@@ -25,6 +25,7 @@ from constants import *
 from helpers.helpers import similarity_score, iterator_get_next
 from helpers.mongo import *
 from patch_tweepy import *
+from render_results.render_html import render_html
 
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
@@ -390,8 +391,11 @@ def find_authorities(q, col):
 
     print 'keys',keys
     nr_top = int(math.ceil(2 * math.log(len(members))))
-    for x in get_top_members(members, nr_top):
+    top_members = get_top_members(members, nr_top)
+    for x in top_members:
         print x
+    # Forms and HTML page from the top users returned.
+    render_html(keys, top_members, col)
 
     # Remove every reduced feature as they need to be recomputed
     # when one wants a plot of points.
