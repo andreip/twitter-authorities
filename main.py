@@ -411,7 +411,9 @@ def fetch_tweets(q, pages, col, lang='en', rpp=100):
     # Send max_id, since_id as params
     #since_id = 475064331709972480 # halep sharapova
     #since_id = 478358845753131009 # gas russia ukraine
-    since_id = None
+    #halep at wimbledon in pereira first set (first wimbledon match)
+    since_id = 481506703276797952
+    #since_id = None
     max_id = None
     while page_count < pages:
         tweets = api.search(q=q, lang=lang, count=rpp, max_id=max_id,
