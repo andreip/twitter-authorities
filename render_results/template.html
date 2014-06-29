@@ -1,6 +1,20 @@
 <html>
     <head>
         <title>Authorities for {{ query }}</title>
+        <style>
+            table {
+                border-collapse: collapse;
+            }
+            table, th, td {
+                border: 1px solid black;
+            }
+            table th {
+                width: 100px;
+            }
+            tr td {
+                text-align: center;
+            }
+        </style>
     </head>
     <body>
         <table>
@@ -20,10 +34,10 @@
             {% for user in features %}
                 {% for name, feat in user.items %}
                     <tr>
-                        <td>{{forloop.counter}}</td>
+                        <td>{{forloop.parentloop.counter}}</td>
                         <td>{{ name }}</td>
                         {% for k, v in feat.items %}
-                            <td>{{ v }}</td>
+                            <td>{{ v|floatformat:2 }}</td>
                         {% endfor %}
                     </tr>
                 {% endfor %}
