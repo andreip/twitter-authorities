@@ -47,7 +47,6 @@ def get_tweet_type(col, tweet_id):
             print e
             return None
         time.sleep(5)
-        db[col].update({'id': tweet['id']}, tweet, upsert=True)
     return get_tweet_type_from_text(tweet['text'])
 
 def get_tweet_type_from_text(tweet_text):
