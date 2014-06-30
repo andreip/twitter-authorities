@@ -43,7 +43,7 @@ def get_tweet_type(col, tweet_id):
         print 'Fetching tweet id ' + str(tweet_id), '; sleeping 5s'
         try:
             tweet = api.get_status(tweet_id)
-        except tweepy.error.TweepError as e:
+        except Exception as e:
             print e
             return None
         time.sleep(5)
