@@ -6,6 +6,7 @@ import pprint
 import re
 import sys
 import time
+import urllib2
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -404,6 +405,18 @@ def find_authorities(q, col):
     db[rfeatures_col(col)].remove()
 
 
+def preprocess_fetched_tweet(tweet):
+    '''For now we only need to expand the urls to their maximum
+    before storing tweets in DB, as it's easier to search for them
+    afterwards.
+    '''
+    for u in tweet['entities']['urls']:
+        # Expand every URL to the maximum and override the
+        # expanded URL (which may not be expanded to the max for
+        # some tweets).
+        u['expanded_url'] = urllib2.urlopen(u['expanded_url']).geturl()
+    return tweet
+
 def fetch_tweets(q, pages, col, lang='en', rpp=100):
     print 'Fetch tweets', q, pages, col
     # Make sure db is clean.
@@ -420,6 +433,7 @@ def fetch_tweets(q, pages, col, lang='en', rpp=100):
     while page_count < pages:
         tweets = api.search(q=q, lang=lang, count=rpp, max_id=max_id,
                             since_id=since_id)['statuses']
+        tweets = map(preprocess_fetched_tweet, tweets)
         db[col].insert(tweets)
         page_count += 1
         # Update the max_id based on those fetched, as twitter returns

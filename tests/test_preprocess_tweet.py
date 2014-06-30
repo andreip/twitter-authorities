@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 
 from preprocess_words import process_text
+from main import preprocess_fetched_tweet
 
 class TestPreprocessTweet(unittest.TestCase):
 
@@ -20,3 +21,21 @@ class TestPreprocessTweet(unittest.TestCase):
         tweet2 = 'Some tweet and has som\' words'
         print tweet2
         print process_text(tweet2)
+
+    def test_preprocess_fetched_tweet_urls(self):
+        '''Test that for given tweets, their URLs are expanded to
+        the maximum and overwritten.
+        '''
+        # Keep an example of a tweet which has the expanded_url
+        # also shortened, so it needs to get it expanded and
+        # updated.
+        tweet = {'entities': {'urls': [{
+            'expanded_url': 'http://t.co/hAplNMmSTg',
+        }]}}
+        expected_tweet = {'entities': {'urls': [{
+            'expanded_url':
+            'http://www.wtatennis.com/players/player/13516/title/simona-halep',
+        }]}}
+
+        actual_tweet = preprocess_fetched_tweet(tweet)
+        self.assertEqual(expected_tweet, actual_tweet)
