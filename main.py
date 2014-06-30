@@ -154,14 +154,18 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
             # Mark the fact that this tweet has been retweeted at least once.
             if tweet['retweet_count'] > 0:
                 user_metrics[UM.RT2] += 1
-                # Keep a record of all unique users that retweeted
-                # someone's tweets in time.
-                # 100 is twitter's limit of getting retweeterers.
-                retweeters |= set(map(lambda u: u['user']['screen_name'],
-                                      api.retweets(tweet['id'], count=100)))
                 # Need to make 4 calls per minute.
                 print 'Fetched retweeterers for tweet', tweet['id'],\
                       '; sleeping 15s'
+                try:
+                    users = map(lambda u: u['user']['screen_name'],
+                                api.retweets(tweet['id'], count=100))
+                    # Keep a record of all unique users that retweeted
+                    # someone's tweets in time.
+                    # 100 is twitter's limit of getting retweeterers.
+                    retweeters |= set(users)
+                except Exception as e:
+                    print e
                 time.sleep(15)
 
     print 'Retweeters found, total: ', len(retweeters), total_retweeters
