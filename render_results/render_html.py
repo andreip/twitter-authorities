@@ -8,6 +8,8 @@ import os
 from django.template import Template, Context, loader
 from django.conf import settings
 
+from helpers.mongo import get_min_max_timestamp
+
 # We have to do this to use django templates standalone - see
 # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
 settings.configure()
@@ -18,7 +20,7 @@ settings.TEMPLATE_DIRS += (
     path,
 )
 
-def render_html(keys, top, query):
+def render_html(keys, top, query, db):
     '''Given input, form a dict to pass to render_authorities_page.
 
     keys: list of strings that represent the headers of
@@ -45,7 +47,8 @@ def render_html(keys, top, query):
     res['metrics_doc'] = UM.__doc__
     res['features_doc'] = UF.__doc__
     res['query'] = query
-    print res['features']
+    # Add min,max timestamp for HTML generation.
+    res['min_t'], res['max_t'] = get_min_max_timestamp(query, db)
     render_authorities_page(res, query)
 
 def render_authorities_page(context_dict, query):

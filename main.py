@@ -398,7 +398,7 @@ def find_authorities(q, col):
     for x in top_members:
         print x
     # Forms and HTML page from the top users returned.
-    render_html(keys, top_members, col)
+    render_html(keys, top_members, col, db)
 
     # Remove every reduced feature as they need to be recomputed
     # when one wants a plot of points.
