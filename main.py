@@ -40,7 +40,7 @@ def get_tweet_type(col, tweet_id):
     if cursor.count() > 0:
         tweet = cursor.next()
     else:
-        print 'Fetching tweet id ' + str(tweet_id)
+        print 'Fetching tweet id ' + str(tweet_id), '; sleeping 5s'
         try:
             tweet = api.get_status(tweet_id)
         except tweepy.error.TweepError as e:
@@ -75,14 +75,6 @@ def conversation_started_by_user(col, tweet):
     reply_to_type = get_tweet_type(col, tweet['in_reply_to_status_id'])
     return reply_to_type != TweetType.CT
 
-def get_retweeters(col, screen_name):
-    '''Search db for patterns like RT @screen_name: and count
-    the number of users.
-    '''
-    users = db[col].find({'text': {"$regex" : '.*RT @' + screen_name + '.*'}},
-                         {'user.screen_name': 1})
-    return map(lambda u: u['user']['screen_name'], users)
-
 def get_user_mentions(tweet, tweet_type):
     '''Get accurate mentions by ignoring semantic header.
     * 'RT @user: The awesome news' becomes 'The awesome news'
@@ -115,9 +107,9 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
     print 'Compute metrics for', screen_name
     tweets = db[col].find({'user.screen_name': screen_name}).sort('id',
                           pymongo.ASCENDING)
-    retweeters, users_mentioned = [], []
+    retweeters, users_mentioned = set(), []
     tweets_texts = []
-    actual_retweeters = 0
+    total_retweeters = 0
 
     for tweet in author_tweets:
         tweet_type = get_tweet_type_from_text(tweet['text'])
@@ -158,16 +150,23 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
         # If it's a retweet, then the retweet_count represents
         # how many time the original tweet has been retweeted, no good!
         if tweet_type != TweetType.RT:
-            actual_retweeters += tweet['retweet_count']
+            total_retweeters += tweet['retweet_count']
             # Mark the fact that this tweet has been retweeted at least once.
             if tweet['retweet_count'] > 0:
                 user_metrics[UM.RT2] += 1
+                # Keep a record of all unique users that retweeted
+                # someone's tweets in time.
+                # 100 is twitter's limit of getting retweeterers.
+                retweeters |= set(map(lambda u: u['user']['screen_name'],
+                                      api.retweets(tweet['id'], count=100)))
+                # Need to make 4 calls per minute.
+                print 'Fetched retweeterers for tweet', tweet['id'],\
+                      '; sleeping 15s'
+                time.sleep(15)
 
-    # Find in db all the authors that retweeted a given user.
-    retweeters = get_retweeters(col, screen_name)
-    print 'Retweeters found, actual: ', len(retweeters), actual_retweeters
+    print 'Retweeters found, total: ', len(retweeters), total_retweeters
     # Update the number of unique users that retweeted current users's tweets.
-    user_metrics[UM.RT3] = len(set(retweeters))
+    user_metrics[UM.RT3] = len(retweeters)
     # Count the nr of users mentioned by the author; and also unique.
     user_metrics[UM.M1] = len(users_mentioned)
     user_metrics[UM.M2] = len(set(users_mentioned))
