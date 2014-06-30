@@ -73,11 +73,10 @@ def unshorten_url(url):
     '''URL unshortener.
 
     http://stackoverflow.com/questions/7153096/how-can-i-un-shorten-a-url-using-python/7153185#7153185.'''
+    from constants import *
     parsed = urlparse.urlparse(url)
-    h = httplib.HTTPConnection(parsed.netloc)
+    h = httplib.HTTPConnection(parsed.netloc, timeout=TIMEOUT_URL_SHORTENER)
     resource = parsed.path
-    if parsed.query != "":
-        resource += "?" + parsed.query
     h.request('HEAD', resource)
     response = h.getresponse()
     if response.status/100 == 3 and response.getheader('Location'):
