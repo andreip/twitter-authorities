@@ -6,7 +6,6 @@ import pprint
 import re
 import sys
 import time
-import urllib2
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -23,7 +22,8 @@ from bson.objectid import ObjectId
 import pymongo
 
 from constants import *
-from helpers.helpers import similarity_score, iterator_get_next
+from helpers.helpers import (similarity_score, iterator_get_next,
+                             unshorten_url)
 from helpers.mongo import *
 from patch_tweepy import *
 from render_results.render_html import render_html
@@ -414,7 +414,10 @@ def preprocess_fetched_tweet(tweet):
         # Expand every URL to the maximum and override the
         # expanded URL (which may not be expanded to the max for
         # some tweets).
-        u['expanded_url'] = urllib2.urlopen(u['expanded_url']).geturl()
+        try:
+            u['expanded_url'] = unshorten_url(u['expanded_url'])
+        except Exception as e:
+            print e
     return tweet
 
 def fetch_tweets(q, pages, col, lang='en', rpp=100):

@@ -1,5 +1,7 @@
 import ConfigParser
+import httplib
 import io
+import urlparse
 
 from preprocess_words import process_text
 
@@ -66,3 +68,19 @@ def similarity_score(texts):
         for j in range(0,i):
             s += similarity_texts(texts[i], texts[j])
     return 2 * s / float(n * (n-1))
+
+def unshorten_url(url):
+    '''URL unshortener.
+
+    http://stackoverflow.com/questions/7153096/how-can-i-un-shorten-a-url-using-python/7153185#7153185.'''
+    parsed = urlparse.urlparse(url)
+    h = httplib.HTTPConnection(parsed.netloc)
+    resource = parsed.path
+    if parsed.query != "":
+        resource += "?" + parsed.query
+    h.request('HEAD', resource)
+    response = h.getresponse()
+    if response.status/100 == 3 and response.getheader('Location'):
+        return unshorten_url(response.getheader('Location'))
+    else:
+        return url

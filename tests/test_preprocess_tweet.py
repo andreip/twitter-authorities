@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 from preprocess_words import process_text
-from main import preprocess_fetched_tweet
+from helpers.helpers import unshorten_url
 
 class TestPreprocessTweet(unittest.TestCase):
 
@@ -22,20 +22,14 @@ class TestPreprocessTweet(unittest.TestCase):
         print tweet2
         print process_text(tweet2)
 
-    def test_preprocess_fetched_tweet_urls(self):
-        '''Test that for given tweets, their URLs are expanded to
-        the maximum and overwritten.
+    def test_unshorten_url(self):
+        '''Test the URL is correctly unshortened by the
+        used unshortener helper.
         '''
         # Keep an example of a tweet which has the expanded_url
         # also shortened, so it needs to get it expanded and
         # updated.
-        tweet = {'entities': {'urls': [{
-            'expanded_url': 'http://t.co/hAplNMmSTg',
-        }]}}
-        expected_tweet = {'entities': {'urls': [{
-            'expanded_url':
-            'http://www.wtatennis.com/players/player/13516/title/simona-halep',
-        }]}}
-
-        actual_tweet = preprocess_fetched_tweet(tweet)
-        self.assertEqual(expected_tweet, actual_tweet)
+        url = 'http://t.co/hAplNMmSTg'
+        expected_url = 'http://www.wtatennis.com/players/player/13516/title/simona-halep'
+        actual_url = unshorten_url(url)
+        self.assertEqual(expected_url, actual_url)
