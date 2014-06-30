@@ -131,9 +131,12 @@ def compute_user_metrics_from_own_tweets(screen_name, col, author_tweets,
 
         # Search all urls of a user how many times they've been posted
         # before this tweet.
-        for url in re.findall(URL_REGEX, tweet['text']):
-            urls_before = db[col].find({'text': {'$regex': '.*' + url + '.*'},
-                                         'id': {'$lt': tweet['id']}}).count()
+        # Use expanded ULRs to search for and compare, else we might
+        # miss some that are the same.
+        for url in tweet['entities']['urls']:
+            e_url = url['expanded_url']
+            urls_before = db[col].find({'entities.urls.expanded_url': e_url,
+                                        'id': {'$lt': tweet['id']}}).count()
             # In case this user is the first to post this URL, give him
             # credit for that.
             if urls_before == 0:
