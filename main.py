@@ -241,6 +241,9 @@ def compute_user_features(screen_name, col):
     user_tweet = db[col].find_one({'user.screen_name': screen_name})
     total_tweets = user_tweet['user']['statuses_count']
 
+    features[UF.TS] = metrics[UM.OT1] + metrics[UM.CT1] + metrics[UM.RT1]
+    features[UF.TS] /= float(total_tweets)
+
     features[UF.SS] = 0 if not metrics[UM.OT1]\
                         else metrics[UM.OT1] / float(metrics[UM.OT1] +
                                                      metrics[UM.RT1])
