@@ -25,6 +25,7 @@ from constants import *
 from helpers.helpers import (similarity_score, iterator_get_next,
                              unshorten_url)
 from helpers.mongo import *
+from migrate.migrate_urls import migrate_urls
 from patch_tweepy import *
 from render_results.render_html import render_html
 
@@ -492,6 +493,11 @@ def main():
         assert len(sys.argv) == 3
         col = search = sys.argv[2]
         find_authorities(search, col)
+    # Compute authorities by inspecting db.
+    elif sys.argv[1] == 'migrate_urls':
+        assert len(sys.argv) == 3
+        col = sys.argv[2]
+        migrate_urls(db, col)
     elif sys.argv[1] == 'plot':
         assert len(sys.argv) == 3
         col = sys.argv[2]
