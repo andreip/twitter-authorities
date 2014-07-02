@@ -121,4 +121,4 @@ COLLECTION_USERS = 'tweets_users'
 DATABASE_NAME = 'licenta'
 
 # Seconds after which to timeout.
-TIMEOUT_URL_SHORTENER = 2
+TIMEOUT_URL_SHORTENER = 5

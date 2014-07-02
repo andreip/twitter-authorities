@@ -40,3 +40,37 @@ class TestPreprocessTweet(unittest.TestCase):
         'https://www.youtube.com/watch?v=enG11nDzaAI&list=UUNa8NxMgSm7m4Ii9d4QGk1Q'
         actual_url = unshorten_url(url)
         self.assertEqual(expected_url, actual_url)
+
+    def test_unshorten_url3(self):
+        url = 'http://bit.ly/1qe93MS'
+        expected_url =\
+        'https://apps.facebook.com/my-polls/yqkvxg'
+        actual_url = unshorten_url(url)
+        self.assertEqual(expected_url, actual_url)
+
+
+    def test_unshorten_url4(self):
+        url = 'https://apps.facebook.com/my-polls/yqkvxg'
+        actual_url = unshorten_url(url)
+        self.assertEqual(url, actual_url)
+
+    def test_unshorten_url5(self):
+        url = 'https://www.betxchange.co.za/sport/tennis'
+        actual_url = unshorten_url(url)
+        self.assertEqual(url, actual_url)
+
+    def test_unshorten_url_timeout(self):
+        url =\
+        'http://yoursportman.mobi/football_news_details.php?news_id=65v288294162Fse6291MXS56916444RFh231377718dTxKHF508710quE5580Dqx592&&s=58v1689136asJ10808BWa89708Zmu1599428ESNIFL586931nTh6438iRr74'
+        try:
+            actual_url = unshorten_url(url)
+            self.assertEqual(url, actual_url)
+        except Exception:
+            self.assertFalse(True)
+
+    def test_unshorten_url_head_error(self):
+        url = 'http://ift.tt/Vld5X8'
+        expected_url =\
+        'https://myaccount.nytimes.com/auth/login?URI=http%3A%2F%2Fwww.nytimes.com%2Freuters%2F2014%2F06%2F24%2Fsports%2Ftennis%2F24reuters-tennis-wimbledon-halep.html%3F_r%3D5&REFUSE_COOKIE_ERROR=SHOW_ERROR'
+        actual_url = unshorten_url(url)
+        self.assertEqual(expected_url, actual_url)
