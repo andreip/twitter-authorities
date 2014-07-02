@@ -77,6 +77,8 @@ def unshorten_url(url):
     parsed = urlparse.urlparse(url)
     h = httplib.HTTPConnection(parsed.netloc, timeout=TIMEOUT_URL_SHORTENER)
     resource = parsed.path
+    if parsed.query != "":
+            resource += "?" + parsed.query
     h.request('HEAD', resource)
     response = h.getresponse()
     if response.status/100 == 3 and response.getheader('Location'):

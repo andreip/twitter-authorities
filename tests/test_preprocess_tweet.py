@@ -33,3 +33,10 @@ class TestPreprocessTweet(unittest.TestCase):
         expected_url = 'http://www.wtatennis.com/players/player/13516/title/simona-halep'
         actual_url = unshorten_url(url)
         self.assertEqual(expected_url, actual_url)
+
+    def test_unshorten_url2(self):
+        url = 'http://fb.me/23mFY1Laf'
+        expected_url =\
+        'https://www.youtube.com/watch?v=enG11nDzaAI&list=UUNa8NxMgSm7m4Ii9d4QGk1Q'
+        actual_url = unshorten_url(url)
+        self.assertEqual(expected_url, actual_url)
