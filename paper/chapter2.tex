@@ -1,0 +1,141 @@
+\chapter{Related Work}
+\label{sec:related-work}
+
+%
+% Related work:
+% * P.Jurczyk et. al. QA communities, important de identificat authorities pt ca unele intrebari nu au suficient feedback din partea comunitatii si e greu de prezis daca a fost raspuns corect sau nu la el, si ar ajuta sa stii daca un authoritative pearson a rasp la el
+%
+%
+
+In order to classify a web page or a person as authoritative or not, there are two main approaches used extensively in the research community: link analysis based and text analysis based. The former is mainly an application of PageRank\cite{pagerank} or HITS\footnote{\label{hits}http://en.wikipedia.org/wiki/HITS\_algorithm}\cite{hits}. The latter uses textual features combined in such a way so as to give the best results for the problem at hand.
+
+There are some notable papers that have very important contributions to the field, bring new ideas and features to be able to find Influencers on Twitter, in the microblogging and outside the microblogging arena.\\
+The first one, TwitterRank, by Jianshu et. al. \cite{twitterrank}, introduces a method of identifying Twitter Influencers, one that outperforms Twitter's own ranking model.\\
+The second one, also focusing on Twitter, proposed by E. Bakshy et. al.\cite{bakshy} identifies the "local influence" of users by checking number of reposts (using URL matching) by 1-hop followers, and following the reposts chain to more than 1-hop for "total influence" per user.\\
+One final Twitter related contribution is a model proposed by A. Pal and S. Counts\cite{microblogs}, where they emphasize the importance of "both nodal and topical metrics".
+
+Outside microblogging we note some other relevant contributions. One proposed by Farahat et. al., Augeans\cite{augeas} is applied on web pages, the authors viewing it as "complementary to the Google search engine".\\
+Q\&A communities have as well been extensively studied, as they play an important role in communities like: StackOverflow, Duolingo, Wikipedia, Quora, Yahoo! Answers, Ubuntu Forums, Stack Exchange, Linux Forums etc.
+Jurczyk et. al.\cite{qalink} proposed a Q\&A model that uses link analysis and identifies users as hubs and authorities, in accordance with the HITS\cite{hits} model.\\
+The model proposed by Pal et. al.\cite{qapal} deals with early identification of experts in Q\&A in a supervised learning way with human feedback, proving the efficiency of their model.
+
+\section{TwitterRank: Finding Topic-sensitive Influential Twitterers}
+
+TwitterRank is an algorithm that uses both topical analysis and link structure (based on PageRank\cite{pagerank}) to identify authorities on Twitter. According to Jianshu et. al.\cite{twitterrank}, the ranking model proposed by them "outperforms the one Twitter currently [in 2010] uses and other related algorithms, including the original PageRank and Topic-sensitive PageRank".
+
+Their model does gather a set of authors located in Singapore and their 1-hop neighbours (friends and followers). For each author a topical distillation is realized using an unsupervised learning algorithm for obtaining a distribution of probabilities over a set of topics for each user, Latent Dirichlet Allocation (LDA) model\cite{lda}. It then constructs an associated graph of directed edges from \textit{followers} to \textit{friends} per each topic.
+The intuition here is that a user's influence is high if the sum of all the followers' influence is high too. But different from PageRank\cite{pagerank}, the "influence on each follower is determined by the relative amount of content the follower received" (Jianshu et. al.\cite{twitterrank}) from the author.
+
+The approach imagines a random surfer (like PageRank\cite{pagerank}) going from twitterer to twitterer on the following chain. The transition probability from follower $s_i$ to friend $s_j$ is:
+
+$$P_t(i,j) = \frac{|T_j|}{\sum\limits_{a\ :\ s_i\ follows\ s_a} |T_a|} * sim_t(i,j)$$
+
+where $|T_j|$ is the number of tweets published by $s_j$, and $sim_t(i,j)$ is the similarity between authors $s_i$ and $s_j$ defined as:
+
+$$sim_t(i,j) = 1 - |DT_{it}^{'} - DT_{jt}^{'}|$$
+
+where $DT_{ij}$ expresses how many times a word in author $s_i$'s tweets is classified as part of topic $t_j$.
+
+In addition, in a similar way to PageRank\cite{pagerank}, they introduce a teleport factor to avoid infinite loops in the network of friends who follow their followers too.
+
+Finally, Jianshu et. al.\cite{twitterrank} state that their paper is "the first to report the phenomenon of homophily[\footnote{\label{notehomophily}In the context of Twitter, this means a user follows a friend because he is interested in the content of the friend.}] in a community of Twitter".
+As a direct consequence of this, they introduced a PageRank-like algorithm that takes the following relationships into consideration.
+
+\section{AuGEAS (AUthoritativeness Grading, Estimation, and Sorting)}
+
+The AuGEAS\cite{augeas} model proposed by Farahat et. al. uses both link analysis (PageRank\cite{pagerank}) and textual characteristics to retrieve web pages that are authoritative on a subject. According the the authors, "the method is suited to 'high-value' content search". Moreover, the topics given as examples in relation to the proposed model are more scientific-oriented and medical-related, for e.g. "Alcohol Addiction", "Internet Filtering", "Cancer Cure".
+
+The AuGEAS model proposes four attributes: Review , Author's background, Audience, Author's affiliation and some associated values like Reviewed, Not Reviewed, Professional, General, Media, Commercial and None. All four attributes are assigned to web pages and based on the resulting combination of values, it is classified as belonging to one of the following classes:
+\begin{itemize}
+	\item \textbf{Scientific documents}: written by professionals for other professionals
+    \item \textbf{General information-scientific}: written by professionals, but for general public audience
+    \item \textbf{Commercial pages}: also including newspaper editorials
+    \item \textbf{Mail groups and discussion lists}
+    \item \textbf{Home pages}
+    \item \textbf{Links pages}: contains links with descriptions associated to them
+\end{itemize}
+
+The model also proposes some textual features that help classify according to above mentioned classes: particular characters usage (question marks, semicolons), numbers, particular words ("I", "Mr.", "Dr." etc.), HTML features, readability indices.
+
+Farahat et. al. proposed two prediction models. First, Augeas, is a linear regression supervised learning problem applied on manually labeled training set from which they also derived the best combination of features. The second one, Boost, is a "C4.5" decision-tree based model that classifies according to previous classes, again training on the manually labeled data set.
+
+
+\section{Discovering Authorities in Question Answer Communities by Using Link Analysis}
+
+The model proposed by Jurczyk et. al.\cite{qalink} attempts to identify authorities in Q\&A communities like Naver and Yahoo! Answers. The model proposed uses link analysis over the network of users. The graph resulted expresses the idea that a user $u1$ connected to user $u2$ with a direct edge means that user $u2$ has answered a particular questioned asked by $u1$.
+
+The above graph was identified by Jurczyk et. al. to suggest "that nodes representing questions authors act as 'hubs' while nodes representing answer authors correspond to 'authorities.'. Using the HITS\cite{hits} model, two formulas resulted to compute the authority of the users:
+
+$$H(i) = \sum_{j=0..K}A(j)\quad\quad\quad A(j) = \sum_{i=0..M}H(i)$$
+
+where "vectors H and A are initialized to all 0 and 1 respectively, and are updated iteratively using the equation above".
+
+
+\section{Early Detection of Potential Experts in Question Answering Communities}
+
+The motivation of the paper proposed by Pal et. al.\cite{qapal} is that some potential experts not identified early on don't get appreciation (through badges, statuses, ranks etc.) from the community for their hard work on answering questions and thus leave the community after a while.
+The model is evaluated on TurboTax Live Community (TTLC)\footnote{\label{ttlc}http://ttlc.intuit.com}, a tax-related Q\&A forum on which a team of experts from Intuit promote users to \textit{superuser} status if they consider them skilled enough.
+
+The model identifies \textit{motivation} and \textit{ability} as the most important qualities of a potential expert. In detail, the qualities per user are: quantity of contributions, frequency of contributions, commitment towards the community, domain knowledge of the user, trustworthiness of user's answers, politeness and clarity in response.
+
+On the features above the authors use SVM and DTree supervised learning models. They partition the input data using k-fold cross-validation, k=10, so as to avoid overfitting the training data. They calculated precision $p$, recall $r$ and F-Measure as $\frac{2*p*r}{p+r}$ where they found the "F-measure of DTree is marginally better than SVM. [...] This makes the predictions of DTree as an attractive choice for further analysis.".
+
+Another model approach was to use a ranking of users based on features, selecting a top of users, by calculating the Gaussian Cumulative Distribution Function (CDF) for each user:
+
+$$R_G(x_i) = \prod_{f=1}^{d}\int_{-\infty}^{x_i^f} N(x; \mu_f, \sigma_f)$$
+
+This ranking model was used both individually and on the resulting users from DTree and SVM for sorting purposes.
+
+\section{Everyone’s an Influencer: Quantifying Influence on Twitter}
+
+The model proposed by E. Bakshy et. al.\cite{bakshy} to "quantify the influence of a given post by the number of users who subsequently repost the URL". Using this main idea, the authors "computed individual-level influence as the logarithm of the average size of all cascades for which that user was a seed". To test how well their model works, they also created a regression tree classifier which used some additional features: number of followers, number of friends, number of tweets, date of joining, total influence and local influence.
+
+The local influence refers to the average number of reposts by 1-hop followers of a user, while total accounts for the complete chain of reposting, not limiting itself to 1-hop followers.
+
+Using the classifier they observed that "individuals who have been influential in the past and who have many followers are indeed more likely to be influential in the future; however, this intuition is correct only on average".
+
+The model was tested on twitter data of two months period from which they kept only bit.ly URLs containing posts. They used one month data for training and one for predicting.
+
+Bakshy et. al.\cite{bakshy} noted that the spread of the posts ("cascade size") also depends on the type of URLs contained in the posts. Their assumption was validated through human feedback using Amazon’s Mechanical Turk (AMT) that labeled the content's interestingness.
+
+
+\section{Identifying Topical Authorities in Microblogs}
+
+The model proposed by A. Pal and S. Counts\cite{microblogs} deals with both textual topical and nodal features of a potential influencer.\\
+The work of the authors is a great inspiration as well for the current thesis, as it poses a very useful property, that the model is "computationally feasible in near real-time scenarios", thus we will reuse some of the features from\ \cite{microblogs}, and credit the authors' work fully.
+
+The authors categorize tweets into the following categories: original tweets, conversational tweets and repeated/retweeted tweets, abbreviated OT, CT and RT respectively.
+
+The features extracted for each potential influencer are:
+\begin{itemize}
+	\item topical signal (TS), expressing the interest of the user to a given topic
+    \item signal strength (SS), expressing how much does an author post his original tweets versus other's posts by retweeting
+    \item non-chat signal (nCS), expressing how much does a user chat about the topic, not being important when chat was initiated by other user (as the reply may be out of politeness)
+    \item retweet impact (RI), expressing how many times did others retweet author's post, greatly penalizing posts that are retweeted by a single (or few) author(s) all the time and also discarding retweets of the author (trying to discard retweet reciprocity, a concept highlighted in TwitterRank\cite{twitterrank} about "following" relationship)
+    \item mention impact (MI), expressing how many times was an author genuinely mentioned, discarding the time an author mentioned others (again, to avoid mention reciprocity, concept used in TwitterRank\cite{twitterrank})
+    \item information diffusion (ID), expressing how many users saw the information from the user, penalizing by the number of users who knew about this particular information before the author
+    \item network score (NS), expressing the range of followers that are topically interested in following the user, discarding the possibility of following reciprocity mentioned in TwitterRank\cite{twitterrank}
+    \item number of links shared divided by author's original topical tweets
+    \item self-similarity score (explained below) to avoid including spammers that repeat posts
+    \item number of hashtags used divided by author's original topical tweets
+\end{itemize}
+
+Using the above features, the authors use Gaussian Mixture Model (GMM) to form Gaussian clusters over the users represented as n\_features dimensional. Moreover, to minimize the errors based on initial estimates, the initial parameters required are computed using KMeans.
+
+The authors run a few instances of GMM and pick the one "with largest log likelihood". Given the probability for each point of being in a resulted cluster, the points that have a probability $p(x) \geq 0.9$ are kept. Then the cluster with the best (average) TS, RI, MI is chosen.
+
+They then apply Gaussian ranking by assuming the features are Gaussian, and calculate the total score of a user by its features with:
+
+$$R_G(x_i) = \prod_{f=1}^{d}\int_{-\infty}^{x_i^f} N(x; \mu_f, \sigma_f)$$
+
+in a similar way Pal et. al.\cite{qapal} did.
+
+The results are compared to a PageRank\cite{pagerank} based implementation, a strictly textual properties model (using only TS, SS, nCS, and the last three features mentioned) and a randomly-selected users that aren't in the target cluster computed with GMM as explained above.
+
+The results were decreasing in the order they were specified above, with the best one being the one using all features presented. The interestingness score was asserted using a set of human evaluation participants.
+
+As a final note, the model proposed by A. Pal and S. Counts\cite{microblogs} does define a new similarity score, easy to compute in comparison with the one proposed by Weng et. al. in TwitterRank\cite{twitterrank}. The similarity between two posts $s1$ and $s2$ is defined as:
+
+$$S(s1, s2) = \frac{|s1 \cap s2|}{|s1|}$$
+
+expressing "how much a user borrows words from her previous posts". So applying this as a sum over all combination of ordered posts by an author results in a similarity score computed for each user.

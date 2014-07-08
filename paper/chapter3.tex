@@ -1,0 +1,256 @@
+\chapter{User Metrics and Dataset}
+\label{sec:metrics-dataset}
+
+%
+% arhitecture:
+% * tabel cu randuri search-ul, cu col: sample size, authors, retweets, original tweets, CT, medium number of topical tweets / author
+% * poate sa fac un graf cu conexiunile link-analysis despre topic-uri pe follower-friend relationships
+% * scris un pseudocod de ceva
+% * Vazut cum sunt KMeans si altele implementate, ar trebui sa aiba un Cross-validation Set, nu?!?
+% * facut feature-urile gaussiene? [1][2]
+%   - [1] http://matplotlib.org/users/pyplot_tutorial.html
+%   - [2] https://class.coursera.org/ml-005/lecture/95
+%   - Early detection of potential experts Q&A foloseste asta pt ranking de useri calculand CDF
+% * detect spam users and filter them out
+% * intors procent de useri din volumul stream-ului
+% * facut HTML result cu 
+
+
+%
+% Idei:
+% - pe pasi, feature cu cat de asemanatoare sunt topic-urile despre care posteaza:
+%   1) construire TOP useri mare din mai multe clusterizari pt a maximiza sansele si a nu pierde useri importanti
+%   2) pt fiecare user, ia un sample de tweet-uri si vezi cu LDA ce topic-uri ies, cat de asemanatoare sunt => daca posteaza despre diverse lucruri sau despre chestii asemanatoare
+% - parsare twitter timelines http://stackoverflow.com/questions/8176203/how-can-i-parse-a-twitter-html-page-using-php
+% - feature: how many URLs do you post that no one posts before about the topic at hand
+% - detectare spammeri prin oferire cateva exemple (inspiratie: Kolari - SVMs for the blogosphere : splog detection)
+% - readability indices of posts ar putea detecta boti/spammeri (Gunning Fog or Flech[8] in AUGEAS)
+% - folosire GMM si selectare useri cu p(x) >= 0.9 ca in paper + obtinere rank cu Gaussian CDF ; aici autorii si-ar fi dorit sa verifice mai in detaliu aplicarea unor ponderi asupra feature-urilor, pt a vedea cum e influentat modelul
+
+
+In this chapter we will explain in order:
+\begin{enumerate}
+	\item How we combined ideas from other papers and what the overall idea of the model is.
+    \item What data we tested on and some characteristics about it.
+    \item The metrics and features used to get authorities on Twitter
+\end{enumerate}
+
+
+\section{Overview}
+\label{sec:metrics-overview}
+
+Our model's goal from the start was to keep it "computationally feasible in near real-time scenarios", as Pal et. al. did in their model\cite{microblogs}. But along the way we saw that the idea is kind of exaggerated, because in real implementations used by clients (e.g. marketing), in order to infer something on a topic, you first need to gather the data on that specific topic (which may take a while due to Twitter's API rate limiting, see section \ref{sec:dataset}).
+
+Moreover, some metrics from Pal et. al.\cite{microblogs} cannot be inferred easily by just looking on topical data, but additional API calls to Twitter need to be done (which may take a while due to rate limiting). Because of that, we dropped the idea of \textbf{"near real-time"} and consider the algorithm as \textbf{"simple to explain to potential marketing clients"}.
+
+The model proposed in the following thesis is not our contribution to the field, but rather put together, in a way it hasn't been done before, from contributions presented in the previous section, especially from Pal et. al.\cite{microblogs} and from the work of Bakshy et. al.\cite{bakshy}. We even try to see how applying some weights to features influences the final result, a wish expressed in the future work of Pal et. al. model.
+
+From the former paper of Pal et. al.\cite{microblogs} we used all metrics except graph based metrics which would have been hard to detect without access to the entire dataset (as Pal et. al. might have had). See section \ref{subsec:challenges-twitter} for details on why gathering all the data is difficult and costly.
+
+From the latter paper of Bakshy et. al.\cite{bakshy} we came with the idea of tracing the number of unique URLs users posted, related to the searched topic. This is an original contribution that resembles in a way the approach from Bakshy et. al.\cite{bakshy}, but it distinguishes from it in that we don't go deep into tracing how the influence spreads throughout the network, but just compute a simple textual metric.
+
+Our model contains some features extracted from tweets that we gathered (see section \ref{sec:dataset}). Based on those metrics we form a set of features inspired from Pal et. al.\cite{microblogs} and apply a simple non-weighted mean on all the features, forming a TOP users rank. We also scaled the features as some have higher values than others, so avoiding data skews.
+
+
+\section{Dataset}
+\label{sec:dataset}
+
+% * world cloud of dataset? care sunt cuvinte dese
+% * nr friends/followers + median etc. legat de date, Quantifying Influence on Twitter paper section 3
+
+We chose the dataset from table \ref{table:dataset} due to both some advantages and some restrictions:
+\begin{itemize}
+	\item \textbf{sports} and \textbf{world concerns politics/war}, are among the best talked about in general
+    \item \textbf{sports} include a lot of small-talk and spammers and bots which we wanted to see if we can exclude with the features
+    \item the particular topics are best talked about in June-July 2014, and the Twitter Search API restrictions (see section \ref{subsec:challenges-twitter}) didn't allow us to get other past topics.
+    \item \textbf{"world cup"} has a high volume of spammers and small-talk which we want to see if we can filter out
+    \item \textbf{"halep"} is chosen for two reasons: few results (and thus quickly computable features) and national pride
+    \item \textbf{"ukraine gas russia"} was chosen because it includes some subtile influencers (like reporters) which we wanted to see if we can find
+\end{itemize}
+
+%\todo grafic cu nr de tweets cu axa timpului?
+
+
+\begin{table}[!h]
+\centering
+\setlength{\tabcolsep}{12pt}
+\begin{tabular}{ | c | c | c| c| }
+\hline
+Query & "halep" & "ukraine gas russia" & "world cup"\\
+\hline
+\# Tweets & 2,736 & 16,203 & 109,215\\
+\hline
+\# Authors & 1,507 & 10,967 & 91,287\\
+\hline
+Time frame & 5 x 24 h  & 14 h  & 7 x 24 h \\
+           & (24-29.06.2014) & (15-16.06.2014) & (05-12.06.2014) \\
+\hline
+\end{tabular}
+\caption{Dataset gathered and used for results.}
+\label{table:dataset}
+\end{table}
+
+
+\section{Metrics and Features}
+\label{sec:metrics-features}
+
+\subsection{Metrics}
+
+In this chapter we only present the metrics and features we use for finding topical authorities.
+We first use some metrics defined by Pal et. al.\cite{microblogs}, presented in table \ref{table:metrics}. The last metric (\textbf{U}) is inspired from Bakshy et. al., although it distinguishes from their work \cite{bakshy}. See section \ref{sec:metrics-overview} for an overview and more details on what papers we used and how it is different.
+
+
+\begin{table}[!h]
+\setlength{\tabcolsep}{12pt}
+\begin{tabular}{ c | l }
+OT1 & Number of original tweets \\
+OT2 & Number of links shared \\
+OT3 & Self-similarity score that computes how similar is\\     & author's recent tweet w.r.t her previous tweets \\
+OT4 & Number of keyword hashtags used \\
+\hline  
+CT1 & Number of conversational tweets \\
+CT2 & Number of conversational tweets where conversation \\
+	& is initiated by the author \\
+\hline
+RT1 & Number of retweets of other's tweet \\
+RT2 & Number of unique tweets (OT1) retweeted by other users \\
+RT3 & Number of unique users who retweeted author's tweets \\
+\hline
+M1  & Number of mentions of other users by the author \\
+M2  & Number of unique users mentioned by the author \\
+M3  & Number of mentions by others of the author \\
+M4  & Number of unique users mentioning the author \\
+\hline
+U   & Number of URLs the user posted before any other \\
+\end{tabular}
+\caption{User Metrics used for feature computation.}
+\label{table:metrics}
+\end{table}
+
+Like in Pal et. al.\cite{microblogs}, the tweets are classified in the following categories:
+
+\begin{itemize}
+    \item conversational tweet (CT) is a tweet that begins with "@username", so as to express that the conversation is with the "username" user; this way the author notifies the "username" user about the tweet; the two users can keep a conversation this way, through public tweets (unlike Facebook and others which can have private conversations)
+    \item repeated tweet (RT) is a tweet that begins with "RT @username", expressing the fact that the content is not original, but has been copied from "username" and one gives credit to that user using the \textbf{@ mention} sign (used in CT too)
+	\item original tweet (OT), one that a user has posted without him retweeting or copying content from others (RT) and which is neither a conversational tweet (CT)
+    \item mentions (M) distinguish themselves from CT and RT, as we count a "@username" mention only if it's not at the beginning of the tweet and it doesn't begin with "RT @username", because these two are automatically added headers by Twitter. In short, we only count as mentions those "@username" who've been mentioned intentionally, not automatically added by Twitter.
+\end{itemize}
+
+The self-similarity score OT3 between two texts $s1$ and $s2$ is computed like in Pal et. al.\cite{microblogs}:
+
+$$S(s1, s2) = \frac{|s1 \cap s2|}{|s1|}$$
+
+expressing "how much a user borrows words from her previous posts". To apply this for each user, we use:
+
+$$S(a) = \frac{2 * \sum_{i=1}^n\sum_{j=1}^{i-1}S(s_i,s_j)}{(n-1) * n}$$
+
+where $time(s_i) < time(s_j), \forall\ i < j$.
+
+Computing and understanding the metrics from table \ref{table:metrics} is straightforward, and it shall become clear how each one is computed in Section \ref{sec:implementation}, especially by going through the tweet's details in Section \ref{sec:tweet-format}.
+
+\subsection{Features}
+\label{sec:features}
+
+The features are computed from the metrics from table \ref{table:metrics} and have been designed in such a way so that the biggest value for any feature is the best. This implies a simple idea that trying to maximize the average of all the features would give a potential authority.
+
+For metrics that are best to be lower than higher (like similarity), we can solve that with sign change or subtracting it from one (as we did).
+
+See each feature in detail below:
+
+\subsubsection{Topical Signal}
+
+Topical Signal estimates the degree of an author's involvement in the topic:
+
+$$TS = \frac{OT1 + CT1 + RT1}{|\#tweets|}$$
+
+This may be highly useful to use when we want to find those true authorities that post about a specific topic that is broad enough. If however, the topic is rather specific, like "ukraine gas russia" from table \ref{table:dataset}, then we won't be able to find any authorities that post exclusively about that, but rather there are authorieties that post about a wider topic, like "ukraine russia", a good example being \textit{KyivPost}.
+
+\subsubsection{Signal Strength}
+
+Signal Strength estimates how original is the author. For a true authority, this should be close to one because we consider an authority one that finds the news early, not one that finds information from other twitter sources.
+
+$$SS = \frac{OT1}{OT1 + RT1}$$
+
+\subsubsection{Non-Chat Signal}
+
+$$nCS = \frac{OT1}{OT1 + CT1} + \lambda * \frac{CT1 - CT2}{CT1 + 1}$$
+
+The above formula suggests that we want to take into consideration the chat that a user has produced. But if the user did not start the conversations itself, then the second term ($\frac{CT1 - CT2}{CT1 + 1}$) will be close to 1, so the result will be the biggest when the author hasn't started chats itself; the $\lambda$ parameter controls the importance of the second term.
+
+\subsubsection{Retweet Impact}
+
+Retweet Impact estimates how retweeted were an author's tweets. It catches the case when only a few users are often retweeting and it penalizes it.
+
+$$RI = RT2 * \log{RT3}$$
+
+From the above formula we can observe that if a user's posts are retweeted 100 times ($RT2 = 100$), but by a single user ($RT3 = 1$), then $RI = 0$.
+
+\subsubsection{Mention Impact}
+
+Mention Impact estimates how mentioned is a user by others. By mentioned we mean those "@username" mentions that were not added by twitter, but explicitly by the user (as said at the beginning of section \ref{sec:metrics-features}).
+
+The feature's formula discards the mentions that may be due to reciprocity, concept found in Weng et. al.'s work, TwitterRank\cite{twitterrank}, about the "following" relationship, but it can be thought as politeness that applies to mentioning too.
+
+$$MI = \max{(0, M3 * \log M4 - M1 * \log M2)}$$
+
+Similar to the retweeting impact from above, if the number of users mentioning the author is small (M4), then the overall score is also small.
+
+\subsubsection{Hashtag Ratio}
+
+Hashtag Ratio accounts for the average number of hashtags per post. It should keep close to 1 and not diverge too much.
+
+$$HR = \frac{OT4}{OT1}$$
+
+It helps avoid spammers/bots with very big ratio, as this seems to be their common practice.
+
+\subsubsection{Links Ratio}
+
+Links Ratio accounts for the average number of links per post. It should not go high above 2 and diverge too much, just like for hashtags. It doesn't really make sense to have more than two URLs per post (considering one is an image, one is an article at most).
+
+$$LR = \frac{OT2}{OT1}$$
+
+It is not clear whether spammers/bots use more than 1-2 URLs per post. At a first glance it seemed not to be the case. So the $LR$ feature may help in demoting those that don't post any URLs in their posts, as that doesn't offer any credibility. Moreover, you would expect that a tweet with 140 characters\footnote{\label{fn:twitter-140}https://dev.twitter.com/docs/counting-characters} on average would not be enough to report everything in detail that happened, but rather point to an external resource where to go into details. This greatly depends on topic.
+
+\subsubsection{Non-Similarity}
+
+Non-Similarity close to 0 means that an author's posts are highly similar to one another. The probability of a user being a spammer/bot raises with the similairity of the posts.
+Similarity metrics is between 0 and 1 and is better to be closest to 0. So because we want to maximize the features, we invert it to be better for $nSIM$ to be close to 1.
+
+$$nSIM = 1 - SIM$$
+
+This can catch only easy bots, not the most sophisticated ones.
+
+\subsubsection{URL}
+\label{subsec:URL}
+
+This feature is inspired by the work of Bakshy et. al. in \cite{bakshy}. The idea is to count the number of URLs a user has posted before any other user. The URL feature highlights how many original contributions does a user have with respect to the searched topic.
+
+This feature can cover some cases where a user would not give credit to another one's original post by using the "@" mention sign or the "RT @" feature, but instead would copy the content without giving credit.
+
+The URL feature expresses how many URLs did an author post on topic before any other user. So given a news article, the credit is received by the author who posts a link to the news article first. The others receive nothing, moreover, they get penalized.
+
+Before using the feature we first considered what's the probability of a URL to be included in Twitter posts. Did this for all three queries, results in table \ref{table:url-percent}.
+
+
+\begin{table}[!h]
+\centering
+\setlength{\tabcolsep}{12pt}
+\begin{tabular}{ | c | c | c| c | }
+\hline
+Query & "halep" & "ukraine gas russia" & "world cup"\\
+\hline
+\# Tweets & 2,736 & 16,203 & 109,215\\
+\hline
+\# URL Tweets & 1,312 & 13,775 & 28,246\\
+\hline
+\% & 48\% & 85\% & 26\% \\
+\hline
+\end{tabular}
+\caption{Percent of URLs appearing in tweets.}
+\label{table:url-percent}
+\end{table}
+
+
+Indeed, adding URLs in tweets is also supported by the fact that Twitter imposes a 140 character limit\footref{fn:twitter-140}, so one generally uses Twitter by briefly describing an idea and then adding a URL to an external resource where it's explained more thoroughly.
+
+We can see in table \ref{table:url-percent} that in topics where we want to support our claim (like politics), a URL is very frequent, while in sports URLs are less likely to appear due to the nature of the tweets that are mainly status updates that don't need to offer any additional details or references.

@@ -1,0 +1,47 @@
+\chapter{Introduction}
+
+% identificarea influentatorilor pe twitter despre un topic oarecare
+% 
+% idei:
+% - Explicat ce e un influencer
+% - Modelul twitter ce e un friend-follower, cum nu trebuie sa te follow you back ca sa poti primi update-uri de la your "Friend"
+% - Scopul influentatorilor:
+%   * expune posibilitatea sa fii la curent de la surse direct intr-un mediu real-time web http://en.wikipedia.org/wiki/Real_time_web si http://readwrite.com/2009/09/22/explaining_the_real-time_web_in_100_words_or_less#awesm=~oHDhCUMfyspNTd
+%     cu mentiunea ca e un comentariu dragut al lui Phil Wolff mai jos de citat ; deci iti ofera posibilitatea sa faci ordine/filtrezi imensul volum de date
+%   * de citit [16], Twitter e o platforma de marketing, deci gasirea influentatorilor are un important rol in campanii
+%     Vezi twitterRank [16],[9],[10]
+%     9,10 zic sustin ca poti imbunatati campania prin identificarea influentatorilor si "engage" with him?
+%   * scenarii cand gasirea influentatorilor e utila: e.g. cauti sa angajezi un programator remote si vrei sa gasesti pe cineva care e influentator in acel topic (e.g. python) ; poate va dori el sau poate recomanda pe cineva la randul lui, daca este pasionat de python.
+%   * gasit alte scenarii cand awareness-ul e bun de la influentator?
+%   * inspiratie: http://statphys.skku.ac.kr/~bjkim/teaching/NetMarket14/Papers/InfluencerTwitter.pdf
+% - Poate zis de reciprocitatea friends/followers din TwitterRank si de ce e gresit sa evaluezi influenta pe baza nr de followers
+% - Observat in [12,3]TwitterRank ca nr de followers nu reflecta influenta cu exactitate.
+% - De spus de link structure (PageRank, HITS) vs analiza textuala a documentului user-ului care e relevant de multe ori in determinarea influentei sale (Authoritativeness_grading_estimation_sorting intro/abstract)
+% - La final spus ce se intampla in restul capitolelor, in continuare
+
+In this time of high volume of information it becomes more and more important to be able to filter out the irrelevant data. Most of us want to keep only the high quality information, from first responders, the actual influencers that spread out the particular information in the first place. For e.g., searching for \textit{ukraine russia} topic does bring a lot of information out of which a lot is repeated (retweeted) or reformulated from some main sources, so as to spread it to their followers. Only a few of the information is actually original. Finding the sources that can be trusted to offer accurate information is very important to stay informed and, in the above example, may also be a \textit{life or death} situation.
+
+%\todo[The term of influencer refers]
+
+A different application where identifying topical authorities/influencers\footnote{\label{noteinfluencer}In the following thesis, we shall use interchangeably influencer and authority or authoritative.} may be crucial is in the business area because it can influence "public opinion"\cite{katz}, "adoption of innovations"\cite{rogers}, "new product market share"\cite{bass}, or "brand awareness"\cite{keller} (in Bakshy et. al.\cite{bakshy}).
+
+The purpose of the thesis is to be able to identify, in a simple to explain kind of way, topical authorities on social platforms. The attention is directed towards Twitter.com because of its
+richness in metadata of communication and because everything is public, unlike other Microblogging platforms (e.g. Facebook) where conversation can also be private. On Twitter, a user can interact with other users or pages by referencing (@name) or with a topic by adding a hashtag (\#topic) in the Tweet itself. Moreover, the user relationships of friends-followers makes it possible to gather additional features in identifying authorities.
+
+In Twitter terminology, a \textbf{follower} is one that follows the current user, while a \textbf{friend} is one that the current user is following. You can see how a tweet looks like in Section 
+\ref{sec:tweet-format}.
+
+The Twitter authorities are computed in the following way:
+\begin{enumerate}
+	\item compute metrics and features for each user we consider a potential authority
+    \item we aggregate each user's features in a way to obtain a ranking (like a mean average, weighted average, clustering etc.)
+    \item we get a top of users to represent the authority based on the resulted rank. We can do this because the features are designed in such a way so that it is best to maximize each value of each feature (biggest is best).
+\end{enumerate}
+
+The \textbf{structure of the thesis} is as follows. In Section \ref{sec:related-work}, we start by introducing some of the related work both in Microblogging (Twitter especially) and outside of Microblogging (Q\&A communities, blogs), including the works that most inspired the current thesis. In Section \ref{sec:metrics-dataset} we start by explaining in Section \ref{sec:metrics-overview} what papers and how were they combined to obtain the features, then go to detailing what dataset we gathered and tested the authoritative algorithm on in Section \ref{sec:dataset}. In the final part, in Section \ref{sec:metrics-features}, we describe how we compute both the metrics and the features with mathematical formulas.
+
+Section \ref{sec:implementation} is more oriented on offering algorithms on how metrics and features from Section \ref{sec:metrics-dataset} are computed. We start by detailing how we fetched Twitter data and what are challenges involved when using the Twitter Search API in Section \ref{sec:fetch-data}. We then show in Section \ref{sec:store-tweets} how a tweet looks like and what are the most important fields and what they represent, so that one can understand how metrics from Section \ref{sec:metrics-features} were computed. Next in Section \ref{sec:process-authorities} we give a high level code implementation of how the authorities are computed.
+
+After detailing on the features and how the features are implemented in the previous sections, we show in Section \ref{sec:results} what results we obtained and what experiments we did.
+
+The last section, Section \ref{sec:conclusions}, concludes by briefly presenting the contributions of the thesis, as well as expressing what future work needs to be done in order to improve the results even further.

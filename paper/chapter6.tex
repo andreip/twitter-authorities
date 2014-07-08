@@ -1,0 +1,36 @@
+\chapter{Conclusions}
+\label{sec:conclusions}
+
+\section{Contributions}
+
+
+In a brief manner, we enumerate our main contributions that we will go into detail below:
+\begin{itemize}
+	\item combining features from Pal et. al.\cite{microblogs} and a new original feature (URL) and obtaining authoritative users
+    \item using different weights for features to see how this influences the resulting influencers
+    \item a small accepted bug fix to an open source library used, Tweepy\footnote{https://github.com/tweepy/tweepy/pull/446}
+\end{itemize}
+
+
+The results we have shown in Section \ref{sec:results} have been inspired both from reading papers present in Section \ref{sec:related-work} and others not present there, helping in offering an overview of the current research results and further experiments in the area of Microblogging and outside Microblogging (like Q\&A communities and blogs).
+
+The work in this thesis is mainly based on the contributions brought by Pal. et. al.\cite{microblogs} from where we used all the metrics but the graph based ones (which were hard to compute due to Twitter's API rate limiting and other challenges, see Section \ref{subsec:challenges-twitter} for more details). It should be noted that we had some own interpretations of the work proposed by Pal. et. al.\cite{microblogs}:
+\begin{itemize}
+	\item we gathered the \textbf{topical signal} related tweets by using \codeblock{api.search} endpoint, not using a simple \codeblock{\$regex} in the database. This may in a way give better results due to Twitter's API search being more complex
+    \item mentions related metrics \codeblock{M1, M2, M3, M4} have been computed by database lookup, and not by using the Twitter's API search (which could be inexact, as we didn't use Firehose API, see Section \ref{subsec:challenges-twitter} for details).
+    \item \textbf{self-similarity} in our work is done only on tweets in the searched topic (returned by Twitter Search API); it is not clear whether Pal. et. al. in \cite{microblogs} computed the self-similarity metric on all a user's tweets. It may be a good idea to do so, as Weng et. al. did on a user's timeline by using Latent Dirichlet Allocation (LDA) model\cite{lda} in their work, TwitterRank\cite{twitterrank}. This offered an idea of what topics does a user post about on a daily basis.
+    \item \textbf{hashtag ratio}, \textbf{links ratio} features are not really the best to try and maximize as we've currently done, because abusing hashtags or links in a Twitter post may rather signal spam/bot behavior. Although not specified, Pal. et. al. may have used some more sophisticated ratios for the two features.
+    \item \textbf{non-similarity feature} is computed through our own understanding of the fact that the goal is to maximize the features. It is not explicitly presented in the work of Pal et. al.\cite{microblogs}
+    \item \textbf{mention impact} is yet again considered to be at least 0, we don't leave the feature go below 0 to not skew the data interval too much but rather keep it above 0. This is not specified in the work of Pal et. al.\cite{microbogs}.
+\end{itemize}
+
+Another feature not present in the work of Pal et. al.\cite{microblogs} is inspired from Bakshy et. al.\cite{bakshy}, where the authors do a full trace of how URLs spread and influence the networks of authors to be able to tell the influence it has. We simplify the idea and abstract it into a simple to compute feature, \textbf{original contribution}, representing the number of URLs a user posts first (before any other author about that specific topic). For more details see Section \ref{subsec:URL}.
+
+
+\section{Future work}
+
+Although our approach is based on simplicity and quickness, it captures important users (authority users) for topics in the datasets from Section \ref{sec:dataset}.
+
+The main problem with the current approach is that it doesn't filter the spam users well enough. This is important as no one wants to follow an RSS feed automatic poster on Twitter. Using the external API \textbf{BotOrNot}\footnote{http://truthy.indiana.edu/botornot/}, we can filter out users which are almost certainly (above 70\%) bots or spammers. Currently no API exists, as the project is still in testing and development phase. If not for exclusion purposes, at least flagging those potential spam users in the final authorities results would be useful.
+
+Another future work would be to gather more data sets from more general topics (like \codeblock{IT, TV}) and see how results appear there. This might result in discovering new features that could increase the chances of finding authorities over all topics.

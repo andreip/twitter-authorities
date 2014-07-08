@@ -1,0 +1,221 @@
+\chapter{Implementation Overview}
+\label{sec:implementation}
+
+The infrastructure I used is an amazon EC2 \textit{t1.micro} instance, with low CPU capacity but a volume of 20 GiB\footnote{\label{gbi}1 GB = $10^9$ bytes, 1 GiB = $2^{30}$ bytes.}. The advantage of using Amazon EC2 over a usual PC is that the former can fetch and process data non-stop. I found very useful a Linux command called \codeblock{screen}, which allows closing the SSH connection to EC2 and returning later to find the background process running and to access it once again before exiting. It is an improved version of \codeblock{nohup}.
+
+Using Python, I mainly turned my attention towards the following packages:
+\begin{description}
+	\item[scikit-learn] A machine-learning open source library from which I used scaling, clustering, dimension reduction
+    \item[nltk] A natural language toolkit from which I used tokenization, stemming
+    \item[numpy,scipy] math general purpose used with sklearn
+    \item[tweepy] Used for making Twitter API calls
+	\item[pymongo] A mongoDB\footnote{\label{fn:mongodb}A NoSQL document based database, very friendly, efficient, open source} driver used for queries to the database
+\end{description}
+
+The entire \codeblock{code} is Open Source and available \codeblock{on Github}\footnote{\label{github-code}https://github.com/andreip/tweeter-authorities/}. It was written in Python as it is easier to start development and less verbose than Java.
+
+The application is structured in modules, so it can be easier to read/write and less prone to errors:
+\begin{enumerate}
+	\item A fetching module that receives a query and fetches data from Twitter
+    \item A storing database where tweets received from Twitter API go after fetch
+    \item A computing module that receives a query for which to compute authorities (same with the one the data was fetched from Twitter).
+\end{enumerate}
+
+\section{Fetching data from Twitter}
+\label{sec:fetch-data}
+
+\subsection{Challenges}
+\label{subsec:challenges-twitter}
+
+The tweets in the dataset were gathered by using the Twitter API. It was difficult to gather more than one hundred thousand per topic due to some challenges we did not expect at first:
+\begin{enumerate}
+	\item rate limits imposed by Twitter Search API\footnote{\label{rate-limit}https://dev.twitter.com/docs/rate-limiting/1.1}
+    \item not being able to get older than a week data using Twitter Search API\footnote{\label{twitter-one-week}https://dev.twitter.com/docs/using-search}
+\end{enumerate}
+
+The above restrictions that we found along the way required a very well designed infrastructure to be able to do this in an efficient way. Needless to say, we did not have that kind of infrastructure to parallelize the computation (which is as well very hard to setup and maintain in a cost-efficient way).
+
+To get a sense of how enormouse amount of data Twitter has been generating, please note that according to Alexa ranking in July 2014\footnote{\label{alexa-twitter}http://www.alexa.com/siteinfo/twitter.com}, Twitter.com is the 9th most visited site in the world, the 8th most visited in the United States and the 11th most visited in India.
+
+We found two approaches that would solve the above problems, but which were hard to solve correctly or very expensive:
+\begin{itemize}
+	\item Weng et. al. had a different approach of gathering tweets in TwitterRank\cite{twitterrank}. They parsed HTML Twitter web pages in order to avoid being rate limited. This, however, surely imposed a lot of work and was prone to errors and exceptions, although not mentioned in their paper. It would have been very appreciated, had Weng et. al. shared their work in the Open Source community.
+	\item One other (expensive) approach suggested by Twitter is to use the Twitter Firehose API. The difference to the Search API that we used is that the Firehose API is \textbf{guaranteed to deliver all the tweets} that you searched for. The Twitter Firehose is offered by two Twitter providers, GNIP and DataSift, that you have to contact in order to get access.
+    \item Another approach to using the expansive Firehose API is to remember the data yourself, by using the Twitter Streaming API that pushes tweets once they get posted on Twitter. High volume of tweets are received, so the infrastructure needed is very complex and hard to manage without a team of experienced programmers and machines that scale according to needs.
+\end{itemize}
+
+\subsection{Method}
+
+We ended up using Tweepy, a python Open Source library that helps in making HTTP requests to Twitter's API. In order to avoid rate limiting, there are at least a couple of options:
+\begin{itemize}
+	\item As we did, wait between calls to Twitter endpoint.
+    \item Or use multiple applications and do a \textbf{round-robin} between them, as rate limiting is per application.
+\end{itemize}
+
+The second option is better as you can get more data faster without having to wait between calls, but it requires to create additional applications and make a \textit{scheduling algorithm} between them. This is also risky because Twitter detects fraudulent multiple applications and bans/deletes them.
+
+The first one is the simplest one and involves a code as the following. Suppose you make an API call to the search endpoint which allows 180 queries per 15 minutes\footnote{\label{fn:rate-limit}https://dev.twitter.com/docs/rate-limiting/1.1}. This means we are allowed one query every five seconds, like in Algorithm \ref{alg:fetch}.
+
+% ftp://ftp.tpnet.pl/pub/CTAN/macros/latex/contrib/algorithmicx/algorithmicx.pdf
+\begin{algorithm}
+\caption{Fetching Twitter data}\label{alg:fetch}
+\begin{algorithmic}[1]
+\\ \Comment{query: The query to fetch.}
+\\ \Comment{pages: One page may contain 100 tweets.}
+\Procedure{fetch\_tweets}{$query, pages$}
+\State $page\_count \gets 0$
+\While{$page\_count < pages$}
+	\State $page\_count \gets page\_count + 1$
+    \State $tweets \gets api.search(query)$\label{alg:fetch:api.search}
+    \State \Comment {... process tweets}\label{alg:fetch:process_tweets}
+    \State \Comment {Wait 5 seconds before the next fetch to avoid being rate limited.}
+    \State $sleep(5)$\label{alg:fetch:sleep}
+\EndWhile
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+Taking the Algorithm \ref{alg:fetch} by lines, we detail a little further:
+\begin{description}
+   	\item[line \ref{alg:fetch:api.search}] $api.search$ is a Tweepy\footref{fn:tweepy} method that makes an API call to endpoint\\ \codeblock{https://api.twitter.com/1.1/search/tweets.json}\footnote{\label{fn:twitter-search-api}https://dev.twitter.com/docs/api/1.1/get/search/tweets}
+   	\item[line \ref{alg:fetch:process_tweets}] Processing the tweets may mean a couple of things:
+    \begin{itemize}
+    	\item saving them in the database
+        \item modifying the tweets before or after inserting them in the database, for e.g. expanding the \codeblock{entities.expanded_url} (see section \ref{sec:tweet-format} for more on tweet format) to the maximum before inserting in db.
+    \end{itemize}
+	\item[line \ref{alg:fetch:sleep}] Current operating system thread waits for 5 seconds ; this is the easiest hack one can use to avoid complicated mechanisms of avoiding rate limits.
+\end{description}
+
+\section{Storing tweets}
+\label{sec:store-tweets}
+
+\subsection{About MongoDB}
+
+We use Open Source mongoDB\footref{fn:mongodb} as a storage database, and pymongo as its driver for Python programming.
+
+We've computed some stats in table \ref{table:mongo-stats} in order to show the compression efficiency of mongoDB (only about 1GB of storage). More info about the significance of the table columns can be viewed at MongoDB's official documentation\footnote{\label{mongo-stats-explained}http://docs.mongodb.org/manual/reference/command/dbStats/}.
+
+\begin{table}[!h]
+\centering
+\setlength{\tabcolsep}{12pt}
+\begin{tabular}{ c | c }
+Collections & 13 \\
+Objects & 135,822 \\
+avgObjSize (bytes) & 6,061.386 \\
+storageSize (bytes) & 1,032,364,032 \\
+indexes & 453,7680 \\
+\end{tabular}
+\caption{User MongoDB stats.}
+\label{table:mongo-stats}
+\end{table}
+
+Using on a Linux machine is very straight-forward, it needs only to know a \textit{"--dbpath"}, the path where the database files are going to be stored.
+
+The documents that mongoDB expects to receive are dictionaries. Fortunately, tweets received from Twitter are JSON-like and we can easily convert them to Python dictionaries and insert them in the database. A tweet with only the essential fields kept can be seen in Listing \ref{l:tweet_reduced}.
+Once it is inserted in mongoDB, it automatically receives an additional field as in Listing \ref{l:_id_mongo}.
+
+
+%\begin{adjustbox}{}
+\begin{lstlisting}[caption=Tweet Reduced, label=l:tweet_reduced, language=json,firstnumber=1]
+{
+	'created_at': 'Tue Jun 24 18:39:00 +0000 2014',
+	'entities': {
+		'hashtags': [],
+		'symbols': [],
+		'urls': [],
+		'user_mentions': []
+	},
+	'favorite_count': 2,
+	'id': 481506793332305920,
+	'retweet_count': 1,
+	'text': '#Halep may be a late bloomer but she is the future! She is one of my new favorites. Beautiful playing. #Wimbledon14 #thehill',
+ 	'user': {
+		'id': 33069310,
+		'name': 'Victoria Trower
+		'favourites_count': 250,
+		'friends_count': 388,
+		'followers_count': 111,
+		'location': 'Philadelphia, PA',
+		'screen_name': 'vitaluv0505',
+		'statuses_count': 3110,
+		...
+	}
+	...
+}
+\end{lstlisting}
+%\end{adjustbox}
+
+
+%\begin{adjustbox}{}
+\begin{lstlisting}[caption=MongoDB \_id, label=l:_id_mongo, language=json,firstnumber=1]
+{
+	"_id" : ObjectId("53b06ef0d6bbb370bf6efa8f"),
+	...
+}
+\end{lstlisting}
+%\end{adjustbox}
+
+\subsection{Tweet format}
+\label{sec:tweet-format}
+
+Using Listing \ref{l:tweet_reduced}, we will review some important fields that are used for computing the metrics from Section \ref{sec:metrics-features}:
+\begin{description}
+	\item[text] The actual content the user tweeted on Twitter.com
+	\item[entities] The text field is parsed by Twitter and categorised accordingly. We can see what URLs the user included in his post by looking up the entities.urls field
+    \item[favorite\_count] How many times has the tweet been favorited by others
+    \item[retweet\_count] How many times has the tweet been retweeted by others
+    \item[user] The user that posted the tweet and its metadatas, like:
+    \begin{description}
+    	\item[screen\_name] Represents the "@username" of the user who tweeted the tweet; can see a user's profile at \codeblock{http://twitter.com/screen\_name}
+        \item[favourites\_count] Number of tweets the author has marked as favorite
+        \item[friends\_count] Number of users the user follows
+        \item[followers\_count] Number of users that follow the user
+        \item[statuses\_count] Total number of tweets posted by user
+    \end{description}
+    \item[id] This one is very important as it identifies the tweet itself. You can also view the tweet at \codeblock{http://tweeter.com/screen\_name/status/id}
+\end{description}
+
+\section{Processing data to find Authorities}
+\label{sec:process-authorities}
+
+The overall steps to generating an authority are the ones in Algorithm \ref{alg:authority}. This can happen only after we've gone through Algorithm \ref{alg:fetch} that fetches tweets for a given query and stores them in the database.
+
+Going by the lines, we shall go into more details about the Algorithm \ref{alg:authority}:
+\begin{description}
+    \item[line \ref{alg:get_usernames}] The usernames that we compute features and metrics for in the current implementation are those that \textbf{have an above average number of topical posts}. E.g. if we have three users \codeblock{a, b, c} in total, where they have \codeblock{a=2, b=3, c=4} posted posts about a query; average of posts is 3, so we only compute metrics and features for user \codeblock{c with 4 posts}.
+	\item[lines \ref{alg:compute_metrics}-\ref{alg:compute_features}] use both mongoDB and the Twitter API to gather needed information
+    \item[line \ref{alg:scale_features}] Scaling features is important because some values may be bigger than others. We use \codeblock{sklearn.preprocessing.MinMaxScaler}\footnote{\label{fn:sklearn_minmaxscale}http://scikit-learn.org/stable/modules/preprocessing.html\#scaling-features-to-a-range} that transforms all values to be in \codeblock{[0,1]}
+    \item[line \ref{alg:get_top_users}] the number of top users is currently not fixed e.g. 10, but varies with the number of total users we calculate metrics and features.
+\end{description}
+
+\begin{algorithm}
+\caption{Computing Topic Authorities}\label{alg:authority}
+\begin{algorithmic}[1]
+\\ \Comment{query: The query to get tweets for, from db (already fetched).}
+\Procedure{find\_authorities}{$query$}
+\State \Comment{Get a list of users that are eligible to have}
+\State \Comment{metrics and features calculated for them.}
+\State $usernames \gets get\_usernames()$\label{alg:get_usernames}
+\State
+\State $all\_features \gets \emptyset$
+\For{$username \in usernames$}
+	\State $metrics \gets compute\_metrics(username)$\label{alg:compute_metrics}
+    \State $features \gets compute\_features(metrics)$\label{alg:compute_features}
+    \State $all\_features \gets all\_features \cup features$
+\EndFor
+\State
+\State $final\_features \gets scale\_features(all\_features)$\label{alg:scale_features}
+\State \Comment{top\_no: the number of final users to select as authorities; e.g. 10}
+\State $authorities\_users \gets get\_top\_users(usernames, final\_features, top\_no)$\label{alg:get_top_users}
+\State
+\State \textbf{return} $authorities\_users$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+%\subsection{Computing metrics}
+
+%Expanding on the line \ref{alg:compute_metrics} from Algorithm \ref{alg:authority}, we go into detail about some metrics and how they are computed
+
+%\todo adaugat niste cod, cum folosesc nltk, tokenize, stem
+%\subsection{Computing features}
