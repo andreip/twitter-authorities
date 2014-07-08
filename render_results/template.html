@@ -41,7 +41,7 @@
                         <td>{{forloop.parentloop.counter}}</td>
                         <td>{{ name }}</td>
                         {% for k, v in feat.items %}
-                            <td>{{ v|floatformat:2 }}</td>
+                            <td>{{ v|floatformat:4 }}</td>
                         {% endfor %}
                     </tr>
                 {% endfor %}
