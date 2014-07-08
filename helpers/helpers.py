@@ -83,7 +83,6 @@ def unshorten_url(url):
         h.request('HEAD', resource)
         response = h.getresponse()
     except Exception as e:
-        print e
         return url
 
     if response.status/100 == 3 and response.getheader('Location'):

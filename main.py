@@ -16,7 +16,7 @@ from sklearn import cluster, mixture
 from sklearn.decomposition import PCA
 from sklearn import metrics
 from sklearn.neighbors import kneighbors_graph
-from sklearn.preprocessing import scale
+from sklearn.preprocessing import scale, MinMaxScaler
 
 from bson.objectid import ObjectId
 import pymongo
@@ -389,8 +389,11 @@ def find_authorities(q, col):
             if not keys:
                 keys = user['features'].keys()
     # Scale feature values, as they might be skewed.
-    X = np.vstack(data)
-    X = scale(X)
+    # http://scikit-learn.org/stable/modules/preprocessing.html#scaling-features-to-a-range
+    # Scale all of them between 0 and 1.
+    # does X_std = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0))
+    X = np.vstack(data).astype(np.float)
+    X = MinMaxScaler().fit_transform(X)
 
     members = []
     for i, features in enumerate(X):
