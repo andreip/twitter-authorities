@@ -363,7 +363,9 @@ def compute_centers(data, labels):
 
 
 def get_top_members(members, n_top):
-    return sorted(members, key=lambda x: np.mean(x[1]), reverse=True)[:n_top]
+    # keys    ['SS', 'nCS', 'MI', 'TS', 'nSIM', 'HR', 'LR', 'URL', 'RI']
+    weights = [0,    0,     1,    0,    0,      0,    0,    0,     1]
+    return sorted(members, key=lambda x: np.average(x[1], weights=weights), reverse=True)[:n_top]
 
 
 def find_authorities(q, col):
