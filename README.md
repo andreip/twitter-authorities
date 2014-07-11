@@ -23,6 +23,10 @@ Usage
   $ ./main.py fetch "ukraine gas russia" 100
   ```
   
-2. after we've fetched items, we can compute authorities:
+2. after we've added tweets in mongoDB, we can compute authorities for the collected tweets:
 
-  `./main.py compute "ukraine gas russia"` should give us the main authorities by processing all tweets from mongo collection "ukraine gas russia".
+  ```bash
+  # 2nd param should be a valid collection in mongoDB containing tweets.
+  # should give us the main authorities by processing all tweets from mongo collection "ukraine gas russia".
+  ./main.py compute "ukraine gas russia"
+  ```
