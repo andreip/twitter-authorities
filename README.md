@@ -6,6 +6,8 @@ Requirements:
 * the implementation uses mongodb to store downloaded tweets
 * see requirements.txt for more, but main packages used are: pymongo, tweepy, scikit-learn, numpy, scipy
 
+See results from datasets included in `dump/licenta` folder. Results are in `.html` files in `dump/licenta/results/` folder. These results have been obtained with the current code, by using only `Retweet Impact` and `Mention Impact` features, see `paper/` folder for way more details and how we combined the metrics and analyzed results.
+
 Usage
 ---
 1. populate mongoDB database with tweets
