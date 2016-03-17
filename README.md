@@ -1,7 +1,7 @@
 Summary
 ---
 
-Find authorities for tweeter topics. Needs to download tweets (fetching stage), then it can compute based on fetched tweets.
+Find authorities for Twitter topics. Needs to download tweets (fetching stage), then it can compute based on fetched tweets.
 Requirements:
 * the implementation uses mongodb to store downloaded tweets
 * see requirements.txt for more, but main packages used are: pymongo, tweepy, scikit-learn, numpy, scipy
